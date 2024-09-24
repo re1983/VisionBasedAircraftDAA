@@ -31,14 +31,14 @@ def ex():
         print("Setting orientation")
         data = [\
             [18,   0, -998,   0, -998, -998, -998, -998, -998],\
-            [ 3, 130,  130, 130,  130, -998, -998, -998, -998],\
+            [ 3, 120,  -998, -998,  -998, -998, -998, -998, -998],\
             [16,   0,    0,   0, -998, -998, -998, -998, -998]\
             ]
         client.sendDATA(data)
 
         # Set control surfaces and throttle of the player aircraft using sendCTRL
         print("Setting controls")
-        ctrl = [0.0, 0.0, 0.0, 0.]
+        ctrl = [0.0, 0.0, 0.0, 0.9]
         client.sendCTRL(ctrl)
 
         # Pause the sim
@@ -60,6 +60,7 @@ def ex():
 
         # Make sure gear was stowed successfully
         gear_status = client.getDREF(gear_dref)
+        # print(gear_status)
         if gear_status[0] == 0:
             print("Gear stowed")
         else:

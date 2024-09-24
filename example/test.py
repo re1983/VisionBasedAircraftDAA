@@ -14,11 +14,11 @@ def set_player_position():
 
 # Set control to fly the player aircraft straight north (using heading and throttle)
 def fly_player_north():
-    ctrl = [0.0, 0.0, 0.0, 0.8]  # No roll, no pitch, no yaw, throttle 80%
+    ctrl = [0.0, 0.0, 0.0, 1.0]  # No roll, no pitch, no yaw, throttle 80%
     client.sendCTRL(ctrl)
 
 # Set player aircraft's initial position
-set_player_position()
+# set_player_position()
 
 # Start flying north after setting the position
 fly_player_north()
