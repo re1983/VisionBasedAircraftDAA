@@ -99,10 +99,10 @@ def monitor():
         refs = ["sim/flightmodel/position/psi"]
         values = [0]  # 將偏航角設置為 0 度，朝向真北
         client.sendDREFs(refs, values)
+        dref = "sim/flightmodel/position/true_psi"
+        true_heading = client.getDREFs([dref])
+        print(f"true_heading: {true_heading[0][0]}")
         client.pauseSim(False)
-
-        
-
 
         # client.sendPOSI(posi)
         # client.sendDATA(data)
@@ -110,7 +110,7 @@ def monitor():
         while True:
             if (datetime.now() > last_update + timedelta(milliseconds = update_interval * 1000)):
                 last_update = datetime.now()
-                print(f"loop start - {datetime.now()}")
+                # print(f"loop start - {datetime.now()}")
 
                 posi = client.getPOSI()
                 ctrl = client.getCTRL()
@@ -199,10 +199,10 @@ def monitor():
                 # ctrl = [new_ele_ctrl, new_ail_ctrl, 0.0, 1.0]
                 client.sendCTRL(ctrl)
 
-                output = f"current values --    roll: {current_roll: 0.3f},  pitch: {current_pitch: 0.3f}"
-                output = output + "\n" + f"PID outputs    --    roll: {roll_PID.output: 0.3f},  pitch: {pitch_PID.output: 0.3f}"
-                output = output + "\n"
-                print(output)
+                # output = f"current values --    roll: {current_roll: 0.3f},  pitch: {current_pitch: 0.3f}"
+                # output = output + "\n" + f"PID outputs    --    roll: {roll_PID.output: 0.3f},  pitch: {pitch_PID.output: 0.3f}"
+                # output = output + "\n"
+                # print(output)
 
 if __name__ == "__main__":
     monitor()

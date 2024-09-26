@@ -1,41 +1,87 @@
+import sys
 import xpc
+import PID
+from datetime import datetime, timedelta
+import pyqtgraph as pg
+from pyqtgraph.Qt import QtCore, QtGui
+from pyqtgraph.Qt import QtWidgets
 import time
+import pymap3d as pm
 
-client = xpc.XPlaneConnect()
+camera_DREFs = ["sim/cockpit2/camera/camera_offset_heading",
+        "sim/cockpit2/camera/camera_offset_pitch",
+        "sim/cockpit2/camera/camera_offset_roll"]
+dref_heading = "sim/cockpit2/camera/camera_offset_heading"
+dref_pitch = "sim/cockpit2/camera/camera_offset_pitch"
+dref_roll = "sim/cockpit2/camera/camera_offset_roll"
+dref_view_roll = "sim/graphics/view/view_roll"
+dome_offset_heading = "sim/graphics/view/dome_offset_heading"
+dome_offset_pitch = "sim/graphics/view/dome_offset_pitch"
 
-# Set the initial position for the player aircraft
-def set_player_position():
-    initial_lat = 37.7749  # Example latitude for San Francisco
-    initial_lon = -122.4194  # Example longitude
-    initial_alt = 2500  # Altitude in feet
-    heading = 0.0  # Heading north (0 degrees)
-    pos = [initial_lat, initial_lon, initial_alt, heading, 0.0, 0.0, 1]  # Last value 1 indicates player aircraft
-    client.sendPOSI(pos)
+class Aircraft:
+    """Object for storing positional information for Aircraft"""
+    
+    def __init__(self, ac_num, east, north, up, heading, pitch=-998, roll=-998):
+        self.id = ac_num
+        self.e = east
+        self.n = north
+        self.u = up
+        self.h = heading
+        self.p = pitch
+        self.r = roll
+    
+    def __str__(self):
+        out = "Craft: %.2f, East: %.2f, North: %.2f, Up: %.2f, Heading: %.2f, Pitch: %.2f, Roll: %.2f" % (self.id, self.e, self.n, self.u, self.h, self.p, self.r)
+        return out
 
-# Set control to fly the player aircraft straight north (using heading and throttle)
-def fly_player_north():
-    ctrl = [0.0, 0.0, 0.0, 1.0]  # No roll, no pitch, no yaw, throttle 80%
-    client.sendCTRL(ctrl)
+def set_position(client, aircraft):
+    """Sets position of aircraft in XPlane
 
-# Set player aircraft's initial position
-# set_player_position()
+    Parameters
+    ----------
+    client : SocketKind.SOCK_DGRAM
+        XPlaneConnect socket
+    aircraft : Aircraft
+        object containing details about craft's position
+    """
 
-# Start flying north after setting the position
-fly_player_north()
+    ref = [42.37415695190430, -71.01775360107422, 3048.0]
+    p = pm.enu2geodetic(aircraft.e, aircraft.n, aircraft.u, ref[0], ref[1], ref[2]) #east, north, up
+    client.sendPOSI([*p, aircraft.p, aircraft.r, aircraft.h], aircraft.id)
 
-# Simulate flying for 10 seconds
-time.sleep(10)
+def run_data_generation(client):
+    """Begin data generation by calling gen_data"""
 
-# Set the non-player aircraft's position to move from west to east
-def fly_non_player_west_to_east(start_lat, start_lon, start_alt):
-    for i in range(10):  # Simulate 10 position updates
-        new_lon = start_lon + 0.01 * i  # Increment longitude to move east
-        pos = [start_lat, new_lon, start_alt, 0.0, 0.0, 0.0, 1]
-        client.sendPOSI(pos, ac=1)  # 'ac=1' refers to non-player aircraft
-        time.sleep(1)
+    client.pauseSim(True)
+    client.sendDREF("sim/operation/override/override_joystick", 1)
+    # client.sendDREF("sim/cockpit2/switches/camera_power_on", 1)
+    # Set starting position of ownship and intruder
+    set_position(client, Aircraft(1, 0, 100, 0, 0, pitch=0, roll=0))
+    set_position(client, Aircraft(0, 0, 0, 0, 0, pitch=0, roll=0))
+    client.sendVIEW(85)
+    # client.sendVIEW(xpc.ViewType.Tower)
+    # dref_camera_type = "sim/cockpit2/camera/camera_type"
+    # client.sendDREFs([dref_camera_type], [80])  # Track view (跟蹤視角)
+    # print("Camera type set to Track view (following the aircraft)")
+    # dref_camera_type = "sim/cockpit2/camera/camera_type"
+    # client.sendDREFs([dref_camera_type], [3])
+    # current_dref_camera_type = client.getDREFs([dref_camera_type])
+    # print(f"Camera type : ({current_dref_camera_type[0]})")
 
-# Example coordinates for non-player aircraft starting west of player aircraft
-fly_non_player_west_to_east(37.7749, -123.0, 2500)
+    # Pause to allow time for user to switch to XPlane window
+    # time.sleep(1)
+    # for i in range(250):
+    #     set_position(client, Aircraft(1, 0, 100+i, 0, 135, pitch=0, roll=i))
+    #     time.sleep(0.033)
+    # client.pauseSim(False)
+    for i in range(180):
+        # set_position(client, Aircraft(0, 0, i, 0, 0, pitch=0, roll=0))
+        # client.sendDREFs(camera_DREFs, [-998, -i, i])
+        # client.sendDREFs([dref_heading, dref_pitch, dref_roll], [90.0, 45.0, 30.0])
+        client.sendDREFs([dome_offset_heading, dome_offset_pitch], [0, i])
+        time.sleep(0.033)
+        current_heading = client.getDREFs([dome_offset_heading, dome_offset_pitch]) 
+        print(f"Current Camera heading: {current_heading[0]} degrees")
 
-# Set camera view to follow the player aircraft
-# client.sendVIEW(85)  # 85 is the external view around the player aircraft
+with xpc.XPlaneConnect() as client:
+    run_data_generation(client)
