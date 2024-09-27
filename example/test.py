@@ -45,7 +45,7 @@ def set_position(client, aircraft):
         object containing details about craft's position
     """
 
-    ref = [42.37415695190430, -71.01775360107422, 500.0]
+    ref = [40.229635, -111.658833, 2000.0]
     p = pm.enu2geodetic(aircraft.e, aircraft.n, aircraft.u, ref[0], ref[1], ref[2]) #east, north, up
     client.sendPOSI([*p, aircraft.p, aircraft.r, aircraft.h], aircraft.id)
 
@@ -70,19 +70,26 @@ def run_data_generation(client):
     # print(f"Camera type : ({current_dref_camera_type[0]})")
 
     # Pause to allow time for user to switch to XPlane window
-    # time.sleep(1)
-    for i in range(100):
-        set_position(client, Aircraft(1, 0, 100+i, 0, 135, pitch=0, roll=i))
+    time.sleep(5)
+    for i in range(300):
+        set_position(client, Aircraft(1, 0, 100+i, 0, 135+i, pitch=0, roll=i))
         time.sleep(0.033)
     # client.pauseSim(False)
     for i in range(100):
         set_position(client, Aircraft(0, 0, i, 0, 0, pitch=0, roll=0))
         time.sleep(0.033)
-    for i in range(100):
-        client.sendDREFs([dome_offset_heading, dome_offset_pitch], [i, -i])
+    for i in range(25):
+        client.sendDREFs([dome_offset_pitch], [-i/2])
+        time.sleep(0.033)
+        current_pitch = client.getDREFs([dome_offset_pitch])
+        # print(f"Current pitch: {current_pitch[0][0]}")
+    for i in range(360):
+        # current_pitch = client.getDREFs(dome_offset_pitch)
+        # print(f"Current pitch: {current_pitch}")
+        client.sendDREFs([dome_offset_heading], [-i/2])
         time.sleep(0.033)
         # current_heading = client.getDREFs([dome_offset_heading, dome_offset_pitch]) 
-        # print(f"Current Camera heading: {current_heading[0]} degrees")
+        # print(f"Current Camera heading: {current_heading[1][0]} degrees")
 
 with xpc.XPlaneConnect() as client:
     run_data_generation(client)
