@@ -53,6 +53,7 @@ def run_data_generation(client):
     """Begin data generation by calling gen_data"""
 
     client.pauseSim(True)
+    # client.pauseSim(False)
     client.sendDREF("sim/operation/override/override_joystick", 1)
     # client.sendDREF("sim/cockpit2/switches/camera_power_on", 1)
     # Set starting position of ownship and intruder
