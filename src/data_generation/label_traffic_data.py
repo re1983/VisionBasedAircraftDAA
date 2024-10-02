@@ -7,7 +7,7 @@ import json
 import os
 import data_generation.constants as c
 
-def C(o, i, aw0=0, daw=1):
+def get_bb_size(o, i, aw0=0, daw=1):
     """Gets height and width of bounding box"""
     
     x = i.n - o.n
