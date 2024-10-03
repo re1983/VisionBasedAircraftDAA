@@ -3,11 +3,19 @@ import xpc
 def get_acf_info(client):
     aircraft_icao = client.getDREF("sim/aircraft/view/acf_size_z")
     print(f"sim/aircraft/view/acf_size_z: {aircraft_icao}")
+
     aircraft_icao = client.getDREF("sim/aircraft/view/acf_size_x")
     print(f"sim/aircraft/view/acf_size_x: {aircraft_icao}")
-    # aircraft_desc = client.getDREF("sim/aircraft/view/acf_descrip")
-    # print(f"acf_descrip: {aircraft_desc}")
-    
+
+    aircraft_desc = client.getDREF("sim/aircraft/view/acf_descrip")
+    byte_data = bytes(int(x) for x in aircraft_desc if x != 0)
+    description = byte_data.decode('ascii')
+    print("acf_descrip:", description)
+
+    aircraft_icao_data = client.getDREF("sim/aircraft/view/acf_ICAO")
+    byte_data = bytes(int(x) for x in aircraft_icao_data if x != 0)
+    icao_code = byte_data.decode('ascii')
+    print("ICAO code:", icao_code)
     # current_plane_length = client.getDREF('sim/aircraft/view/acf_length')
     # print(f"Plane length: {current_plane_length} ft")
     # current_plane_width = client.getDREF("sim/aircraft/parts/acf_wing_ft")
