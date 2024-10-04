@@ -19,17 +19,10 @@ dref_view_roll = "sim/graphics/view/view_roll"
 dome_offset_heading = "sim/graphics/view/dome_offset_heading"
 dome_offset_pitch = "sim/graphics/view/dome_offset_pitch"
 
-
-        # # Set position of a non-player aircraft
-        # print("Setting NPC position")
-        # #       Lat       Lon         Alt   Pitch Roll Yaw Gear
-        # posi = [37.52465, -122.06899, 2500, 0,    20,   0,  1]
-        # client.sendPOSI(posi, 1)
-
 class Aircraft:
     """Object for storing positional information for Aircraft"""
     
-    def __init__(self, ac_num, east, north, up, heading, pitch=-998, roll=-998, gear=0):
+    def __init__(self, ac_num, east, north, up, heading, pitch=-998, roll=-998, gear=-998):
         self.id = ac_num
         self.e = east
         self.n = north
@@ -64,9 +57,8 @@ def run_data_generation(client):
     client.pauseSim(True)
     # client.pauseSim(False)
     client.sendDREF("sim/operation/override/override_joystick", 1)
-    # client.sendDREF("sim/cockpit2/switches/camera_power_on", 1)
     # Set starting position of ownship and intruder
-    # set_position(client, Aircraft(1, -600, 1200, -10, 135, pitch=0, roll=0))
+    set_position(client, Aircraft(1, -600, 1200, -10, 135, pitch=0, roll=0))
     set_position(client, Aircraft(0, 0, 0, 0, 0, pitch=0, roll=0))
     client.sendDREFs([dome_offset_heading, dome_offset_pitch], [0, 0])
     client.sendVIEW(85)
