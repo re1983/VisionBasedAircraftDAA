@@ -123,7 +123,7 @@ def run_data_generation(client):
     # client.pauseSim(False)
     client.sendDREF("sim/operation/override/override_joystick", 1)
     # Set starting position of ownship and intruder
-    set_position(client, Aircraft(1, -600, 1200, -10, 135, pitch=0, roll=0))
+    set_position(client, Aircraft(1, -600, 1200, -10, 135, pitch=0, roll=0, gear=0))
     set_position(client, Aircraft(0, 0, 0, 0, 0, pitch=0, roll=0))
     client.sendDREFs([dome_offset_heading, dome_offset_pitch], [0, 0])
     client.sendVIEW(85)
@@ -132,11 +132,11 @@ def run_data_generation(client):
     screenshot = wcw.capture_xplane_window(hwnd, abs_x, abs_y, width, height)
     # fourcc = cv2.VideoWriter_fourcc('M','J','P','G')
     # out = cv2.VideoWriter('output.avi', cv2.VideoWriter_fourcc(*'MPEG'), 30.0, (width, height))
-    # fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-    fourcc = cv2.VideoWriter_fourcc(*'XVID')
+    fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+    # fourcc = cv2.VideoWriter_fourcc(*'XVID')
     # fourcc = cv2.VideoWriter_fourcc(*'MJPG')
     print(f"Screenshot shape: {screenshot.shape[1], screenshot.shape[0]}")
-    out = cv2.VideoWriter('output.avi', fourcc, 30.0, (int(screenshot.shape[1]), int(screenshot.shape[0])))
+    out = cv2.VideoWriter('output.mp4', fourcc, 30.0, (int(screenshot.shape[1]), int(screenshot.shape[0])))
     if not out.isOpened():
         print("Error: VideoWriter failed to open")
     # Pause to allow time for user to switch to XPlane window
