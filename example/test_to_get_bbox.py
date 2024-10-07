@@ -73,7 +73,9 @@ def get_bb_coords(client, i, screen_h, screen_w):
         client.getDREF((f'sim/multiplayer/position/plane{i}_z'))[0],
         1.0
     ])
-    
+    # sim/graphics/view/acf_matrix
+    # sim/graphics/view/window_height
+    # sim/graphics/view/window_width
     mv = client.getDREF("sim/graphics/view/world_matrix")
     proj = client.getDREF("sim/graphics/view/projection_matrix_3d")
     
@@ -123,7 +125,7 @@ def run_data_generation(client):
     # client.pauseSim(False)
     client.sendDREF("sim/operation/override/override_joystick", 1)
     # Set starting position of ownship and intruder
-    set_position(client, Aircraft(1, -600, 1200, -10, 135, pitch=0, roll=0, gear=0))
+    # set_position(client, Aircraft(1, -600, 1200, -10, 135, pitch=0, roll=0, gear=0))
     set_position(client, Aircraft(0, 0, 0, 0, 0, pitch=0, roll=0))
     client.sendDREFs([dome_offset_heading, dome_offset_pitch], [0, 0])
     client.sendVIEW(85)
@@ -142,16 +144,18 @@ def run_data_generation(client):
     # Pause to allow time for user to switch to XPlane window
     time.sleep(2)
     for i in range(300):
-        set_position(client, Aircraft(1, -1000+i*5, 2000-i*5, 0, 135, pitch=0, roll=0))
+        set_position(client, Aircraft(1, -1000+i*5, 2000-i*5, 100, 135, pitch=0, roll=0))
+        set_position(client, Aircraft(2, 1000-i*5, 0+i*5, -100, 315, pitch=0, roll=0))
         set_position(client, Aircraft(0, 0, i*3, 0, 0, pitch=0, roll=0))
-        # if i == 0:
-        time.sleep(0.1)
+        # time.sleep(0.1)
         if hwnd:
             screenshot = wcw.capture_xplane_window(hwnd, abs_x, abs_y, width, height)
             # print(f"Screenshot shape: {screenshot.shape}")
             bbc_x, bbc_y = get_bb_coords(client, 1, screenshot.shape[0], screenshot.shape[1])
             # print(f"Bounding box coordinates: {bbc_x}, {bbc_y}")
-            cv2.circle(screenshot, (int(bbc_x), int(bbc_y)), 7, (0, 0, 255), 2)
+            cv2.circle(screenshot, (int(bbc_x), int(bbc_y)), 7, (0, 0, 255), 1)
+            bbc_x, bbc_y = get_bb_coords(client, 2, screenshot.shape[0], screenshot.shape[1])
+            cv2.circle(screenshot, (int(bbc_x), int(bbc_y)), 7, (0, 255, 0), 1)
             ret = out.write(screenshot)
             # print(ret)
             # if ret:
