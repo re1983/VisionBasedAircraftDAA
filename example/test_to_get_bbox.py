@@ -9,10 +9,17 @@ import time
 import cv2
 import pymap3d as pm
 import numpy as np
-import win_capturewindow as wcw
+import platform
+# Conditional import based on OS
+if platform.system() == "Windows":
+    import win_capturewindow as wcw
+else:
+    import subprocess
+    import screenshot_Opencv as so
+
 
 window_title = 'X-System'
-
+plot = False
 camera_DREFs = ["sim/cockpit2/camera/camera_offset_heading",
         "sim/cockpit2/camera/camera_offset_pitch",
         "sim/cockpit2/camera/camera_offset_roll"]
@@ -129,9 +136,14 @@ def run_data_generation(client):
     set_position(client, Aircraft(0, 0, 0, 0, 0, pitch=0, roll=0))
     client.sendDREFs([dome_offset_heading, dome_offset_pitch], [0, 0])
     client.sendVIEW(85)
-    hwnd, abs_x, abs_y, width, height = wcw.get_xplane_window_info(window_title)
-    # print(hwnd, abs_x, abs_y, width, height)
-    screenshot = wcw.capture_xplane_window(hwnd, abs_x, abs_y, width, height)
+    if platform.system() == "Windows":
+        hwnd, abs_x, abs_y, width, height = wcw.get_xplane_window_info(window_title)
+        # print(hwnd, abs_x, abs_y, width, height)
+        screenshot = wcw.capture_xplane_window(hwnd, abs_x, abs_y, width, height)
+    else:
+        xwininfo_output = subprocess.check_output(['xwininfo', '-name', 'X-System']).decode('utf-8')
+        hwnd, abs_x, abs_y = so.get_xplane_window_info(xwininfo_output)
+        screenshot = so.capture_xplane_window(hwnd, abs_x, abs_y)
     # fourcc = cv2.VideoWriter_fourcc('M','J','P','G')
     # out = cv2.VideoWriter('output.avi', cv2.VideoWriter_fourcc(*'MPEG'), 30.0, (width, height))
     fourcc = cv2.VideoWriter_fourcc(*'mp4v')
@@ -144,18 +156,23 @@ def run_data_generation(client):
     # Pause to allow time for user to switch to XPlane window
     time.sleep(2)
     for i in range(300):
-        set_position(client, Aircraft(1, -1000+i*5, 2000-i*5, 100, 135, pitch=0, roll=0))
+        set_position(client, Aircraft(1, -1000+i*5, 1900-i*5, 100, 135, pitch=0, roll=0))
         set_position(client, Aircraft(2, 1000-i*5, 0+i*5, -100, 315, pitch=0, roll=0))
         set_position(client, Aircraft(0, 0, i*3, 0, 0, pitch=0, roll=0))
-        # time.sleep(0.1)
+        time.sleep(0.033)
         if hwnd:
-            screenshot = wcw.capture_xplane_window(hwnd, abs_x, abs_y, width, height)
+            if platform.system() == "Windows":
+                screenshot = wcw.capture_xplane_window(hwnd, abs_x, abs_y, width, height)
+            else:
+                screenshot = so.capture_xplane_window(hwnd, abs_x, abs_y)      
             # print(f"Screenshot shape: {screenshot.shape}")
-            bbc_x, bbc_y = get_bb_coords(client, 1, screenshot.shape[0], screenshot.shape[1])
-            # print(f"Bounding box coordinates: {bbc_x}, {bbc_y}")
-            cv2.circle(screenshot, (int(bbc_x), int(bbc_y)), 7, (0, 0, 255), 1)
-            bbc_x, bbc_y = get_bb_coords(client, 2, screenshot.shape[0], screenshot.shape[1])
-            cv2.circle(screenshot, (int(bbc_x), int(bbc_y)), 7, (0, 255, 0), 1)
+            if plot == True:
+                screenshot = screenshot.copy()
+                bbc_x, bbc_y = get_bb_coords(client, 1, screenshot.shape[0], screenshot.shape[1])
+                cv2.circle(screenshot, (int(bbc_x), int(bbc_y)), 3, (0, 0, 255), -1)
+                bbc_x, bbc_y = get_bb_coords(client, 2, screenshot.shape[0], screenshot.shape[1])
+                cv2.circle(screenshot, (int(bbc_x), int(bbc_y)), 3, (0, 255, 0), -1)
+            
             ret = out.write(screenshot)
             # print(ret)
             # if ret:

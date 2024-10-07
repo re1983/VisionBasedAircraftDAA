@@ -34,13 +34,13 @@ def capture_xplane_window(window_id, abs_x, abs_y):
     return img
 
 
-xwininfo_output = subprocess.check_output(['xwininfo', '-name', 'X-System']).decode('utf-8')
-window_id, abs_x, abs_y = get_xplane_window_info(xwininfo_output)
+# xwininfo_output = subprocess.check_output(['xwininfo', '-name', 'X-System']).decode('utf-8')
+# window_id, abs_x, abs_y = get_xplane_window_info(xwininfo_output)
 
-if window_id:
-    screenshot = capture_xplane_window(window_id, abs_x, abs_y)
-    cv2.imwrite('opencv_xplane_screenshot.png', screenshot)
-    print("Image shape: ", screenshot.shape)
-    print("Screenshot saved as 'xplane_screenshot.png'")
-else:
-    print("X-Plane window not found.")
+# if window_id:
+#     screenshot = capture_xplane_window(window_id, abs_x, abs_y)
+#     cv2.imwrite('opencv_xplane_screenshot.png', screenshot)
+#     print("Image shape: ", screenshot.shape)
+#     print("Screenshot saved as 'xplane_screenshot.png'")
+# else:
+#     print("X-Plane window not found.")
