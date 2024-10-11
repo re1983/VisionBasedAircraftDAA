@@ -99,7 +99,7 @@ def get_bb_coords(client, i, screen_h, screen_w):
 
     return final_x, screen_h - final_y
 
-def set_position(client, aircraft):
+def set_position(client, aircraft, ref):
     """Sets position of aircraft in XPlane
 
     Parameters
@@ -109,10 +109,14 @@ def set_position(client, aircraft):
     aircraft : Aircraft
         object containing details about craft's position
     """
-
-    ref = [40.229635, -111.658833, 2000.0]
     p = pm.enu2geodetic(aircraft.e, aircraft.n, aircraft.u, ref[0], ref[1], ref[2]) #east, north, up
     client.sendPOSI([*p, aircraft.p, aircraft.r, aircraft.h, aircraft.g], aircraft.id)
+
+# ref = [40.669332, -74.012405, 1000.0] #new york
+# ref = [24.979755, 121.451006, 500.0] #taiwan
+ref = [40.229635, -111.658833, 2000.0] #provo
+# ref = [-22.943736, -43.177820, 500.0] #rio
+# ref = [38.870277, -77.030046, 500.0] #washington dc
 
 def run_data_generation(client):
     """Begin data generation by calling gen_data"""
@@ -133,7 +137,7 @@ def run_data_generation(client):
     client.sendDREF("sim/operation/override/override_joystick", 1)
     # Set starting position of ownship and intruder
     # set_position(client, Aircraft(1, -600, 1200, -10, 135, pitch=0, roll=0, gear=0))
-    set_position(client, Aircraft(0, 0, 0, 0, 0, pitch=0, roll=0))
+    set_position(client, Aircraft(0, 0, 0, 0, 0, pitch=0, roll=0), ref)
     client.sendDREFs([dome_offset_heading, dome_offset_pitch], [0, 0])
     client.sendVIEW(85)
     if platform.system() == "Windows":
@@ -150,15 +154,18 @@ def run_data_generation(client):
     # fourcc = cv2.VideoWriter_fourcc(*'XVID')
     # fourcc = cv2.VideoWriter_fourcc(*'MJPG')
     print(f"Screenshot shape: {screenshot.shape[1], screenshot.shape[0]}")
-    out = cv2.VideoWriter('output.mp4', fourcc, 30.0, (int(screenshot.shape[1]), int(screenshot.shape[0])))
-    if not out.isOpened():
-        print("Error: VideoWriter failed to open")
+
+    ref_str = str(ref[0]) + "_" + str(ref[1]) + "_" + str(ref[2])
+    print(f"Reference coordinates: {ref_str}")
+    out = cv2.VideoWriter((ref_str + '_output.mp4'), fourcc, 30.0, (int(screenshot.shape[1]), int(screenshot.shape[0])))
+    # if not out.isOpened():
+    #     print("Error: VideoWriter failed to open")
     # Pause to allow time for user to switch to XPlane window
     time.sleep(2)
     for i in range(300):
-        set_position(client, Aircraft(1, -1000+i*5, 1900-i*5, 100, 135, pitch=0, roll=0))
-        set_position(client, Aircraft(2, 1000-i*5, 0+i*5, -100, 315, pitch=0, roll=0))
-        set_position(client, Aircraft(0, 0, i*3, 0, 0, pitch=0, roll=0))
+        set_position(client, Aircraft(1, -1000+i*5, 1900-i*5, 100, 135, pitch=0, roll=0), ref)
+        set_position(client, Aircraft(2, 1000-i*5, 0+i*5, -100, 315, pitch=0, roll=0), ref)
+        set_position(client, Aircraft(0, 0, i*3, 0, 0, pitch=0, roll=0), ref)
         time.sleep(0.033)
         if hwnd:
             if platform.system() == "Windows":
