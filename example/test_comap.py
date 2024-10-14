@@ -17,10 +17,11 @@ else:
     import subprocess
     import screenshot_Opencv as so
 
-write_oupt_flag = False
+write_oupt_flag = True
+plot = False
 
 window_title = 'X-System'
-plot = False
+
 camera_DREFs = ["sim/cockpit2/camera/camera_offset_heading",
         "sim/cockpit2/camera/camera_offset_pitch",
         "sim/cockpit2/camera/camera_offset_roll"]
@@ -42,12 +43,12 @@ def projection_matrix_to_intrinsics(projection_matrix, width, height):
     
     return fx, fy, cx, cy
 
-def write_cameras_txt(camera_id, fx, fy, cx, cy, width, height, filename="cameras.txt"):
+def write_cameras_txt(camera_id, fx, fy, cx, cy, width, height, filename="project_directory\\cameras.txt"):
     with open(filename, 'w') as f:
         f.write("# CAMERA_ID, MODEL, WIDTH, HEIGHT, PARAMS[]\n")
         f.write(f"{camera_id} PINHOLE {width} {height} {fx} {fy} {cx} {cy}\n")
 
-def write_images_txt(image_data, filename="images.txt"):
+def write_images_txt(image_data, filename="project_directory\\images.txt"):
     with open(filename, 'w') as f:
         f.write("# IMAGE_ID, QW, QX, QY, QZ, TX, TY, TZ, CAMERA_ID, NAME\n")
         f.write("# POINTS2D[] as (X, Y, POINT3D_ID)\n")
@@ -233,16 +234,15 @@ def run_data_generation(client):
             # print(f"Screenshot shape: {screenshot.shape}")
             if plot == True:
                 screenshot = screenshot.copy()
-
                 # bbc_x, bbc_y = get_bb_coords(client, 1, screenshot.shape[0], screenshot.shape[1])
                 # cv2.circle(screenshot, (int(bbc_x), int(bbc_y)), 3, (0, 0, 255), -1)
                 # bbc_x, bbc_y = get_bb_coords(client, 2, screenshot.shape[0], screenshot.shape[1])
                 # cv2.circle(screenshot, (int(bbc_x), int(bbc_y)), 3, (0, 255, 0), -1)
-            
+
             # ret = out.write(screenshot)
             # cv2.imshow('X-Plane Screenshot', screenshot)
             if write_oupt_flag:
-                cv2.imwrite(f'datasets\\test\\image{i}.png', screenshot) #datasets\test
+                cv2.imwrite(f'project_directory\\test\\image{i}.png', screenshot) #datasets\test
 
             # print("Image shape: ", screenshot.shape, "i: ", i)
             wv = client.getDREF("sim/graphics/view/world_matrix")
@@ -261,11 +261,6 @@ def run_data_generation(client):
             tz=quaternion_translation[4][2]
             image_name=f'image{i}.jpg'
             image_data.append((qw, qx, qy, qz, tx, ty, tz, image_name))
-            # with open('images.txt', 'a') as f:
-            # qw, qx, qy, qz = 0.5, 0.5, 0.5, 0.5  # Example quaternion values
-            # tx, ty, tz = 0, 0, 0  # Example translation values
-            # image_name = f'image{i}.jpg'
-            # f.write(f"{i} {qw} {qx} {qy} {qz} {tx} {ty} {tz} 1 {image_name}\n")
             
             if cv2.waitKey(1) & 0xFF == ord('q'):
                 break
