@@ -17,7 +17,7 @@ else:
     import subprocess
     import screenshot_Opencv as so
 
-write_oupt_flag = False
+write_oupt_flag = True 
 plot = False
 
 window_title = 'X-System'
@@ -43,12 +43,12 @@ def projection_matrix_to_intrinsics(projection_matrix, width, height):
     
     return fx, fy, cx, cy
 
-def write_cameras_txt(camera_id, fx, fy, cx, cy, width, height, filename="project_directory/cameras.txt"):
+def write_cameras_txt(camera_id, fx, fy, cx, cy, width, height, filename="project_directory/input/cameras.txt"):
     with open(filename, 'w') as f:
         f.write("# CAMERA_ID, MODEL, WIDTH, HEIGHT, PARAMS[]\n")
         f.write(f"{camera_id} PINHOLE {width} {height} {fx} {fy} {cx} {cy}\n")
 
-def write_images_txt(image_data, filename="project_directory/images.txt"):
+def write_images_txt(image_data, filename="project_directory/input/images.txt"):
     with open(filename, 'w') as f:
         f.write("# IMAGE_ID, QW, QX, QY, QZ, TX, TY, TZ, CAMERA_ID, NAME\n")
         f.write("# POINTS2D[] as (X, Y, POINT3D_ID)\n")
@@ -160,7 +160,7 @@ def set_position(client, aircraft, ref):
 
 # ref = [40.669332, -74.012405, 1000.0] #new york
 # ref = [24.979755, 121.451006, 500.0] #taiwan
-ref = [40.2291, -111.6586, 1600.0] #provo
+ref = [40.2291, -111.6587, 1550.0] #provo
 # ref = [-22.943736, -43.177820, 500.0] #rio
 # ref = [38.870277, -77.030046, 500.0] #washington dc
 # ref = [40.216836, -111.717362, 1450.0] #provo airport
@@ -242,7 +242,7 @@ def run_data_generation(client):
             # ret = out.write(screenshot)
             # cv2.imshow('X-Plane Screenshot', screenshot)
             if write_oupt_flag:
-                cv2.imwrite(f'project_directory/test/image{i:04d}.png', screenshot) #datasets\test
+                cv2.imwrite(f'project_directory/test/{i:04d}.png', screenshot) #datasets\test
 
             # print("Image shape: ", screenshot.shape, "i: ", i)
             wv = client.getDREF("sim/graphics/view/world_matrix")
@@ -260,7 +260,7 @@ def run_data_generation(client):
             tx=quaternion_translation[4][0]
             ty=quaternion_translation[4][1]
             tz=quaternion_translation[4][2]
-            image_name=f'image{i}.jpg'
+            image_name=(f'{i:04d}.png')
             image_data.append((qw, qx, qy, qz, tx, ty, tz, image_name))
             
             if cv2.waitKey(1) & 0xFF == ord('q'):
