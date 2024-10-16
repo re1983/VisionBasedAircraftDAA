@@ -17,7 +17,7 @@ else:
     import subprocess
     import screenshot_Opencv as so
 
-write_oupt_flag = True
+write_oupt_flag = False
 plot = False
 
 window_title = 'X-System'
@@ -43,12 +43,12 @@ def projection_matrix_to_intrinsics(projection_matrix, width, height):
     
     return fx, fy, cx, cy
 
-def write_cameras_txt(camera_id, fx, fy, cx, cy, width, height, filename="project_directory\\cameras.txt"):
+def write_cameras_txt(camera_id, fx, fy, cx, cy, width, height, filename="project_directory/cameras.txt"):
     with open(filename, 'w') as f:
         f.write("# CAMERA_ID, MODEL, WIDTH, HEIGHT, PARAMS[]\n")
         f.write(f"{camera_id} PINHOLE {width} {height} {fx} {fy} {cx} {cy}\n")
 
-def write_images_txt(image_data, filename="project_directory\\images.txt"):
+def write_images_txt(image_data, filename="project_directory/images.txt"):
     with open(filename, 'w') as f:
         f.write("# IMAGE_ID, QW, QX, QY, QZ, TX, TY, TZ, CAMERA_ID, NAME\n")
         f.write("# POINTS2D[] as (X, Y, POINT3D_ID)\n")
@@ -160,7 +160,7 @@ def set_position(client, aircraft, ref):
 
 # ref = [40.669332, -74.012405, 1000.0] #new york
 # ref = [24.979755, 121.451006, 500.0] #taiwan
-ref = [40.228000, -111.658833, 1700.0] #provo
+ref = [40.2291, -111.6586, 1600.0] #provo
 # ref = [-22.943736, -43.177820, 500.0] #rio
 # ref = [38.870277, -77.030046, 500.0] #washington dc
 # ref = [40.216836, -111.717362, 1450.0] #provo airport
@@ -182,7 +182,7 @@ def run_data_generation(client):
     print("ICAO code:", icao_code)
     # Set starting position of ownship and intruder
     set_position(client, Aircraft(0, 0, 0, 0, 0, pitch=0, roll=0), ref)
-    client.sendDREFs([dome_offset_heading, dome_offset_pitch], [0, -35])
+    client.sendDREFs([dome_offset_heading, dome_offset_pitch], [0, -45])
     client.sendVIEW(85)
 
     # mv = client.getDREF("sim/graphics/view/world_matrix")
@@ -225,7 +225,7 @@ def run_data_generation(client):
 
     for i in range(30):
         set_position(client, Aircraft(0, 0, i*15, 0, 0, pitch=0, roll=0), ref)
-        time.sleep(0.2)
+        time.sleep(0.1)
         if hwnd:
             if platform.system() == "Windows":
                 screenshot = wcw.capture_xplane_window(hwnd, abs_x, abs_y, width, height)
@@ -242,15 +242,16 @@ def run_data_generation(client):
             # ret = out.write(screenshot)
             # cv2.imshow('X-Plane Screenshot', screenshot)
             if write_oupt_flag:
-                cv2.imwrite(f'project_directory\\test\\image{i}.png', screenshot) #datasets\test
+                cv2.imwrite(f'project_directory/test/image{i:04d}.png', screenshot) #datasets\test
 
             # print("Image shape: ", screenshot.shape, "i: ", i)
             wv = client.getDREF("sim/graphics/view/world_matrix")
             wv4_4 = np.reshape(wv, (4, 4)).T
             # print(f"World matrix: {wv4_4}")
-            # print(wv4_4)
+            print(f"World matrix length: {len(wv4_4)}")
+            print(wv4_4)
             quaternion_translation = extract_rotation_translation(wv4_4)
-            print(f"Quaternion and translation: {quaternion_translation}")
+            # print(f"Quaternion and translation: {quaternion_translation}")
             image_id=i, 
             qw=quaternion_translation[0]
             qx=quaternion_translation[1]
