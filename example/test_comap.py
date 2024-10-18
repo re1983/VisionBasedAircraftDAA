@@ -17,7 +17,7 @@ else:
     import subprocess
     import screenshot_Opencv as so
 
-write_oupt_flag = True 
+write_oupt_flag = True  
 plot = False
 
 window_title = 'X-System'
@@ -33,14 +33,13 @@ dome_offset_heading = "sim/graphics/view/dome_offset_heading"
 dome_offset_pitch = "sim/graphics/view/dome_offset_pitch"
 
 def projection_matrix_to_intrinsics(projection_matrix, width, height):
-    # fx, fy
+    # # fx, fy
     fx = projection_matrix[0, 0] * width / 2.0
     fy = projection_matrix[1, 1] * height / 2.0
-    
-    # cx, cy
+    # # cx, cy
     cx = width * (1.0 + projection_matrix[0, 2]) / 2.0
     cy = height * (1.0 - projection_matrix[1, 2]) / 2.0
-    
+
     return fx, fy, cx, cy
 
 def write_cameras_txt(camera_id, fx, fy, cx, cy, width, height, filename="project_directory/input/cameras.txt"):
@@ -158,9 +157,11 @@ def set_position(client, aircraft, ref):
     p = pm.enu2geodetic(aircraft.e, aircraft.n, aircraft.u, ref[0], ref[1], ref[2]) #east, north, up
     client.sendPOSI([*p, aircraft.p, aircraft.r, aircraft.h, aircraft.g], aircraft.id)
 
-# ref = [40.669332, -74.012405, 1000.0] #new york
+ref = [40.757, -73.973, 1300.0] #new york
 # ref = [24.979755, 121.451006, 500.0] #taiwan
-ref = [40.2291, -111.6587, 1550.0] #provo
+# ref = [40.2291, -111.6587, 2000.0] #provo
+
+# ref = [40.244319, -111.649226, 1600.0] #byu
 # ref = [-22.943736, -43.177820, 500.0] #rio
 # ref = [38.870277, -77.030046, 500.0] #washington dc
 # ref = [40.216836, -111.717362, 1450.0] #provo airport
@@ -182,7 +183,7 @@ def run_data_generation(client):
     print("ICAO code:", icao_code)
     # Set starting position of ownship and intruder
     set_position(client, Aircraft(0, 0, 0, 0, 0, pitch=0, roll=0), ref)
-    client.sendDREFs([dome_offset_heading, dome_offset_pitch], [0, -45])
+    client.sendDREFs([dome_offset_heading, dome_offset_pitch], [0, -90])
     client.sendVIEW(85)
 
     # mv = client.getDREF("sim/graphics/view/world_matrix")
@@ -223,8 +224,8 @@ def run_data_generation(client):
     # Pause to allow time for user to switch to XPlane window
     time.sleep(1)
 
-    for i in range(30):
-        set_position(client, Aircraft(0, 0, i*15, 0, 0, pitch=0, roll=0), ref)
+    for i in range(240):
+        set_position(client, Aircraft(0, 0, i*10, 0, 0, pitch=0, roll=0), ref)
         time.sleep(0.1)
         if hwnd:
             if platform.system() == "Windows":
@@ -248,8 +249,8 @@ def run_data_generation(client):
             wv = client.getDREF("sim/graphics/view/world_matrix")
             wv4_4 = np.reshape(wv, (4, 4)).T
             # print(f"World matrix: {wv4_4}")
-            print(f"World matrix length: {len(wv4_4)}")
-            print(wv4_4)
+            # print(f"World matrix length: {len(wv4_4)}")
+            # print(wv4_4)
             quaternion_translation = extract_rotation_translation(wv4_4)
             # print(f"Quaternion and translation: {quaternion_translation}")
             image_id=i, 
@@ -262,7 +263,7 @@ def run_data_generation(client):
             tz=quaternion_translation[4][2]
             image_name=(f'{i:04d}.png')
             image_data.append((qw, qx, qy, qz, tx, ty, tz, image_name))
-            
+            # print(f"Image data: {image_data[-1]}")
             if cv2.waitKey(1) & 0xFF == ord('q'):
                 break
 
