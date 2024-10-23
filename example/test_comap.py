@@ -206,6 +206,7 @@ def run_data_generation(client):
     projection_matrix_3d = np.reshape(proj, (4, 4)).T
     print('Projection matrix:')
     print(projection_matrix_3d)
+    np.save('project_directory/input/projection_matrix_3d.npy', projection_matrix_3d)
     fx, fy, cx, cy = projection_matrix_to_intrinsics(projection_matrix_3d, screenshot.shape[1], screenshot.shape[0])
     if write_oupt_flag:
         write_cameras_txt(camera_id=1, fx=fx, fy=fy, cx=cx, cy=cy, width=screenshot.shape[1], height=screenshot.shape[0])
@@ -247,8 +248,12 @@ def run_data_generation(client):
 
             # print("Image shape: ", screenshot.shape, "i: ", i)
             wv = client.getDREF("sim/graphics/view/world_matrix")
+            # print(f"World matrix: {wv}")
+            
             wv4_4 = np.reshape(wv, (4, 4)).T
-            # print(f"World matrix: {wv4_4}")
+            if write_oupt_flag:
+                np.save(f'project_directory/test/{i:04d}.npy', wv4_4)
+                print(f"World matrix: {wv4_4}")
             # print(f"World matrix length: {len(wv4_4)}")
             # print(wv4_4)
             quaternion_translation = extract_rotation_translation(wv4_4)
