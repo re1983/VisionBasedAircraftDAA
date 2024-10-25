@@ -1,59 +1,73 @@
 import numpy as np
-import plotly.graph_objects as go
-from scipy.interpolate import bisplrep, bisplev
+from scipy.interpolate import RectBivariateSpline
+import matplotlib.pyplot as plt
+from scipy.stats import binned_statistic_2d
 
 # 加载 3D 点数据
 points_3d = np.load('project_directory/sparse/points_3d.npy')
 
-# 提取 x, y, z 坐标
+# Sample 3D points (replace with your data)
+# points_3d = np.load('path_to_your_3d_points.npy')
 x = points_3d[:, 0]
 z = points_3d[:, 1]
 y = points_3d[:, 2]
 
-sample_size = 3000  # 设置一个较小的采样数量
-indices = np.random.choice(len(x), size=sample_size, replace=False)
+mask = (z >= -30) & (z <= 500)
+x = x[mask]
+y = y[mask]
+z = z[mask]
 
-x_sample = x[indices]
-y_sample = y[indices]
-z_sample = z[indices]
+# Define the grid resolution
+num_bins = 50  # Adjust the resolution as needed
 
-# 使用采样后的数据进行 B-Spline 拟合
-tck = bisplrep(x_sample, y_sample, z_sample, s=1e3, kx=3, ky=3)
+# Define uniform grid edges for x and y
+x_min, x_max = np.min(x), np.max(x)
+y_min, y_max = np.min(y), np.max(y)
+x_edges = np.linspace(x_min, x_max, num_bins)
+y_edges = np.linspace(y_min, y_max, num_bins)
 
-# # 创建规则网格，用于曲面评估
-x_grid = np.linspace(np.min(x), np.max(x), 100)
-y_grid = np.linspace(np.min(y), np.max(y), 100)
-x_mesh, y_mesh = np.meshgrid(x_grid, y_grid)
+# Bin Z values into a grid, using mean z-values in each bin
+z_grid, x_edges, y_edges, _ = binned_statistic_2d(x, y, z, statistic='mean', bins=[x_edges, y_edges])
 
-# # 使用 B-Spline 拟合曲面数据
-# # 3 是 B-Spline 的阶数，可以调节以改变拟合的平滑程度
-# tck = bisplrep(x, y, z, s=1e3, kx=3, ky=3)
+# Calculate the grid centers for x and y
+x_centers = (x_edges[:-1] + x_edges[1:]) / 2
+y_centers = (y_edges[:-1] + y_edges[1:]) / 2
 
-# 使用拟合参数评估曲面
-z_fit = bisplev(x_grid, y_grid, tck)
+# Remove NaN values (fill empty bins with the mean z-value)
+z_grid = np.nan_to_num(z_grid, nan=np.nanmean(z_grid))
 
-# 创建 B-Spline 曲面
-surface = go.Surface(x=x_mesh, y=y_mesh, z=z_fit, colorscale='Viridis')
+# Fit a B-spline to the z-values on the grid
+spline = RectBivariateSpline(x_centers, y_centers, z_grid, kx=3, ky=3, s=0)
 
-# 创建 3D 散点图显示原始点云
-scatter = go.Scatter3d(
-    x=x, y=y, z=z, mode='markers', 
-    marker=dict(size=2, color='red', opacity=0.8)
-)
+# Generate a dense grid for smoother plotting
+X, Y = np.meshgrid(x_centers, y_centers)
+Z = spline(x_centers, y_centers)
 
-# 创建 Plotly 图表
+import plotly.graph_objects as go
+
+# Create a 3D surface plot
+surface = go.Surface(x=X, y=Y, z=Z, colorscale='Viridis', opacity=0.7)
+
+# Create a scatter plot for the original points
+scatter = go.Scatter3d(x=x, y=y, z=z, mode='markers', marker=dict(size=2, color='red'))
+
+# Create the figure and add the plots
 fig = go.Figure(data=[surface, scatter])
+max_range = max(x.max() - x.min(), y.max() - y.min(), z.max() - z.min())
+mid_x = (x.max() + x.min()) / 2
+mid_y = (y.max() + y.min()) / 2
+mid_z = (z.max() + z.min()) / 2
 
-# 设置布局和轴标签
-fig.update_layout(
-    scene=dict(
-        xaxis_title='X',
-        yaxis_title='Y',
-        zaxis_title='Z',
-        aspectratio=dict(x=1, y=1, z=0.5)
-    ),
-    title="3D Point Cloud B-Spline Surface Fitting"
-)
+# Set labels
+fig.update_layout(scene=dict(
+    xaxis_title='X',
+    yaxis_title='Y',
+    zaxis_title='Z',
+    xaxis=dict(range=[mid_x - max_range/2, mid_x + max_range/2], dtick=250),
+    yaxis=dict(range=[mid_y - max_range/2, mid_y + max_range/2], dtick=250),
+    zaxis=dict(range=[mid_z - max_range/2, mid_z + max_range/2], dtick=250)
+))
 
-# 显示图形
+# Show the plot
 fig.show()
+
