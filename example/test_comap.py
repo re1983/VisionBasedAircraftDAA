@@ -17,7 +17,7 @@ else:
     import subprocess
     import screenshot_Opencv as so
 
-write_oupt_flag = True  
+write_oupt_flag = False  
 plot = False
 
 window_title = 'X-System'

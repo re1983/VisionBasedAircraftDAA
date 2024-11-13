@@ -80,6 +80,8 @@ def get_bb_coords(client, i, screen_h, screen_w):
         client.getDREF((f'sim/multiplayer/position/plane{i}_z'))[0],
         1.0
     ])
+
+
     # sim/graphics/view/acf_matrix
     # sim/graphics/view/window_height
     # sim/graphics/view/window_width
@@ -157,7 +159,7 @@ def run_data_generation(client):
 
     ref_str = str(ref[0]) + "_" + str(ref[1]) + "_" + str(ref[2])
     print(f"Reference coordinates: {ref_str}")
-    out = cv2.VideoWriter((ref_str + '_output.mp4'), fourcc, 30.0, (int(screenshot.shape[1]), int(screenshot.shape[0])))
+    # out = cv2.VideoWriter((ref_str + '_output.mp4'), fourcc, 30.0, (int(screenshot.shape[1]), int(screenshot.shape[0])))
     # if not out.isOpened():
     #     print("Error: VideoWriter failed to open")
     # Pause to allow time for user to switch to XPlane window
@@ -166,7 +168,7 @@ def run_data_generation(client):
         set_position(client, Aircraft(1, -1000+i*5, 1900-i*5, 100, 135, pitch=0, roll=0), ref)
         set_position(client, Aircraft(2, 1000-i*5, 0+i*5, -100, 315, pitch=0, roll=0), ref)
         set_position(client, Aircraft(0, 0, i*3, 0, 0, pitch=0, roll=0), ref)
-        time.sleep(0.033)
+        # time.sleep(0.033)
         if hwnd:
             if platform.system() == "Windows":
                 screenshot = wcw.capture_xplane_window(hwnd, abs_x, abs_y, width, height)
@@ -180,7 +182,7 @@ def run_data_generation(client):
                 bbc_x, bbc_y = get_bb_coords(client, 2, screenshot.shape[0], screenshot.shape[1])
                 cv2.circle(screenshot, (int(bbc_x), int(bbc_y)), 3, (0, 255, 0), -1)
             
-            ret = out.write(screenshot)
+            # ret = out.write(screenshot)
             # print(ret)
             # if ret:
             #     print("Frame successfully written to video file")
@@ -204,26 +206,8 @@ def run_data_generation(client):
         else:
             print("X-Plane window not found.")
     
-    out.release()
+    # out.release()
     cv2.destroyAllWindows()
     
-        # time.sleep(0.033)
-    # client.pauseSim(False)
-    # for i in range(100):
-    #     set_position(client, Aircraft(0, 0, i, 0, 0, pitch=0, roll=0))
-    #     time.sleep(0.033)
-    # for i in range(25):
-    #     client.sendDREFs([dome_offset_pitch], [-i/2])
-    #     time.sleep(0.033)
-    #     current_pitch = client.getDREFs([dome_offset_pitch])
-    #     # print(f"Current pitch: {current_pitch[0][0]}")
-    # for i in range(360):
-    #     # current_pitch = client.getDREFs(dome_offset_pitch)
-    #     # print(f"Current pitch: {current_pitch}")
-    #     client.sendDREFs([dome_offset_heading], [-i/2])
-    #     time.sleep(0.033)
-    #     # current_heading = client.getDREFs([dome_offset_heading, dome_offset_pitch]) 
-    #     # print(f"Current Camera heading: {current_heading[1][0]} degrees")
-
 with xpc.XPlaneConnect() as client:
     run_data_generation(client)
