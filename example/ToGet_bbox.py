@@ -225,23 +225,23 @@ def get_the_ponits(icao_code):
 
 def generate_bounding_box(nose, tail, right, left, top, bottom):
 
-    center_z = (nose[0] + tail[0]) / 2
-    center_x = (right[1] + left[1]) / 2
-    center_y = (top[2] + bottom[2]) / 2
+    center_z = (nose[2] + tail[2]) / 2
+    center_x = (right[0] + left[0]) / 2
+    center_y = (top[1] + bottom[1]) / 2
 
     half_length = np.linalg.norm(np.array(nose) - np.array(tail)) / 2
     half_width = np.linalg.norm(np.array(right) - np.array(left)) / 2
     half_height = np.linalg.norm(np.array(top) - np.array(bottom)) / 2
 
     vertices = np.array([
-        [center_x + half_length, center_y + half_width, center_z + half_height],  # 前右上
-        [center_x + half_length, center_y + half_width, center_z - half_height],  # 前右下
-        [center_x + half_length, center_y - half_width, center_z + half_height],  # 前左上
-        [center_x + half_length, center_y - half_width, center_z - half_height],  # 前左下
-        [center_x - half_length, center_y + half_width, center_z + half_height],  # 后右上
-        [center_x - half_length, center_y + half_width, center_z - half_height],  # 后右下
-        [center_x - half_length, center_y - half_width, center_z + half_height],  # 后左上
-        [center_x - half_length, center_y - half_width, center_z - half_height]   # 后左下 
+        [center_x + half_width, center_y + half_height, center_z + half_length],  # 前右上
+        [center_x + half_width, center_y - half_height, center_z + half_length],  # 前右下
+        [center_x - half_width, center_y + half_height, center_z + half_length],  # 前左上
+        [center_x - half_width, center_y - half_height, center_z + half_length],  # 前左下
+        [center_x + half_width, center_y + half_height, center_z - half_length],  # 后右上
+        [center_x + half_width, center_y - half_height, center_z - half_length],  # 后右下
+        [center_x - half_width, center_y + half_height, center_z - half_length],  # 后左上
+        [center_x - half_width, center_y - half_height, center_z - half_length]   # 后左下 
     ])
 
     return vertices
