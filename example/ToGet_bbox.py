@@ -34,6 +34,8 @@ dome_offset_pitch = "sim/graphics/view/dome_offset_pitch"
 ref = [40.0, -111.658833, 5000.0] #provo
 # ref = [-22.943736, -43.177820, 500.0] #rio
 # ref = [38.870277, -77.030046, 500.0] #washington dc
+name_list_points = ["Nose", "Tail", "Right", "Left", "Top", "Bottom"]
+color_list_points = [(0, 0, 255), (0, 255, 0), (255, 0, 0), (255, 255, 0), (0, 255, 255), (255, 0, 255)]
 class Aircraft:
     """Object for storing positional information for Aircraft"""
     def __init__(self, ac_num, east, north, up, heading, pitch=-998, roll=-998, gear=-998):
@@ -110,7 +112,7 @@ def euler_to_quaternion(yaw, pitch, roll):
     roll = np.radians(roll)
 
     # 使用 scipy.spatial.transform.Rotation 进行转换
-    rotation = R.from_euler('yxz', [-yaw, pitch, roll])
+    rotation = R.from_euler('xyz', [roll, pitch, yaw])
     quaternion = rotation.as_quat()  # 返回 (x, y, z, w)
     # X-Plane uses East-Up-South (EUS) coordinates, convert to North-East-Down (NED)
     # q_ned = np.array([quaternion[3], quaternion[0], -quaternion[2], -quaternion[1]])
@@ -123,10 +125,16 @@ def quaternion_to_rotation_matrix(quaternion):
     rotation_matrix = rotation.as_matrix()
     return rotation_matrix
 
-def get_rotation_matrix(yaw, pitch, roll):
+def get_rotation_matrix_quaternion_radians(yaw, pitch, roll):
     quaternion = euler_to_quaternion(yaw, pitch, roll)
     rotation_matrix = quaternion_to_rotation_matrix(quaternion)
     print("Rotation Matrix: \n", rotation_matrix)
+    return rotation_matrix
+
+def get_rotation_matrix(yaw, pitch, roll):
+
+    rotation = R.from_euler('zxy', [-roll, pitch, -yaw], degrees=True)
+    rotation_matrix = rotation.as_matrix()
     return rotation_matrix
 
 # def get_rotation_matrix(yaw, pitch, roll):
@@ -199,8 +207,8 @@ def get_the_ponits(icao_code):
             [0, 0, 5.72],   #Tail of the aircraft
             [5.5, 0, 0],    #Right wing tip
             [-5.5, 0, 0],   #Left wing tip
-            [0, 2, 5.72],      #Top of the aircraft
-            [0, -1, 0]      #Bottom of the aircraft
+            [0, 1.6, 0],   #Top of the aircraft
+            [0, -1.4, 0]      #Bottom of the aircraft
         ])
     elif icao_code == "B738":
         points = np.array([
@@ -230,7 +238,6 @@ def get_bb_coords_by_icao(client, i, screen_h, screen_w):
     ])
     mv = client.getDREF("sim/graphics/view/world_matrix")
     proj = client.getDREF("sim/graphics/view/projection_matrix_3d")
-
     R = get_rotation_matrix(*get_acf_poes_in_euler(i))
     # nose_distance = 2.5
     # nose_local = np.array([0, 0, nose_distance]) # nose is 2.5 meters in front of the cg (FRD)
@@ -342,8 +349,8 @@ def run_data_generation(client):
     # client.pauseSim(False)
     client.sendDREF("sim/operation/override/override_joystick", 1)
     # Set starting position of ownship and intruder
-    set_position(client, Aircraft(0, 0, 0, 0, 0, pitch=0, roll=0), ref)
-    set_position(client, Aircraft(1, 0, 20, 0, 0, pitch=-90, roll=90, gear=0), ref)
+    set_position(client, Aircraft(0, 0, 0, 0, heading=0, pitch=0, roll=0), ref)
+    set_position(client, Aircraft(1, 0, 20, 0, heading=-45, pitch=-45, roll=-45, gear=0), ref)
     # client.sendDREFs([dome_offset_heading, dome_offset_pitch], [0, 0])
     client.sendVIEW(85)
     time.sleep(1)
@@ -376,15 +383,16 @@ def run_data_generation(client):
     # nose_x, nose_y = get_bb_coords_by_icao(client, 1, screenshot.shape[0], screenshot.shape[1])
     # print(f"Nose coordinates: {nose_x, nose_y}")
     points_list = get_bb_coords_by_icao(client, 1, screenshot.shape[0], screenshot.shape[1])
-    for point in points_list:
-        cv2.circle(screenshot, (int(point[0]), int(point[1])), 3, (0, 255, ), 1)
+    for i, point in enumerate(points_list):
+        cv2.circle(screenshot, (int(point[0]), int(point[1])), 3, color_list_points[i], 1)
+        cv2.putText(screenshot, name_list_points[i], (int(point[0]), int(point[1])), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color_list_points[i], 1)
     # cv2.circle(screenshot, (int(nose_x), int(nose_y)), 3, (0, 255, 0), -1)
     
     # Draw a cross at the center of the image
     center_x, center_y = screenshot.shape[1] // 2, screenshot.shape[0] // 2
     # print(f"Center coordinates: {center_x, center_y}")
-    cv2.line(screenshot, (center_x - 10, center_y), (center_x + 10, center_y), (0, 255, 0), 1)
-    cv2.line(screenshot, (center_x, center_y - 10), (center_x, center_y + 10), (0, 255, 0), 1)
+    cv2.line(screenshot, (center_x - 10, center_y), (center_x + 10, center_y), (0, 127, 0), 1)
+    cv2.line(screenshot, (center_x, center_y - 10), (center_x, center_y + 10), (0, 127, 0), 1)
     cv2.imshow('X-Plane Screenshot', screenshot)
 
 
