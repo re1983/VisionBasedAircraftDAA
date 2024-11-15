@@ -64,17 +64,17 @@ ax.set_zlabel('Z Label')
 
 plt.show()
 # Plotting the additional points
-additional_points = {
-    'Nose': nose,
-    'Tail': tail,
-    'Right': right,
-    'Left': left,
-    'Top': top,
-    'Bottom': bottom
-}
+# additional_points = {
+#     'Nose': nose,
+#     'Tail': tail,
+#     'Right': right,
+#     'Left': left,
+#     'Top': top,
+#     'Bottom': bottom
+# }
 
-for label, point in additional_points.items():
-    ax.scatter(point[0], point[1], point[2], c='b', marker='^')
-    ax.text(point[0], point[1], point[2], label)
+# for label, point in additional_points.items():
+#     ax.scatter(point[0], point[1], point[2], c='b', marker='^')
+#     ax.text(point[0], point[1], point[2], label)
 
-plt.show()
+# plt.show()

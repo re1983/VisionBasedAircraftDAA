@@ -222,6 +222,30 @@ def get_the_ponits(icao_code):
     
 
     return points
+
+def generate_bounding_box(nose, tail, right, left, top, bottom):
+
+    center_z = (nose[0] + tail[0]) / 2
+    center_x = (right[1] + left[1]) / 2
+    center_y = (top[2] + bottom[2]) / 2
+
+    half_length = np.linalg.norm(np.array(nose) - np.array(tail)) / 2
+    half_width = np.linalg.norm(np.array(right) - np.array(left)) / 2
+    half_height = np.linalg.norm(np.array(top) - np.array(bottom)) / 2
+
+    vertices = np.array([
+        [center_x + half_length, center_y + half_width, center_z + half_height],  # 前右上
+        [center_x + half_length, center_y + half_width, center_z - half_height],  # 前右下
+        [center_x + half_length, center_y - half_width, center_z + half_height],  # 前左上
+        [center_x + half_length, center_y - half_width, center_z - half_height],  # 前左下
+        [center_x - half_length, center_y + half_width, center_z + half_height],  # 后右上
+        [center_x - half_length, center_y + half_width, center_z - half_height],  # 后右下
+        [center_x - half_length, center_y - half_width, center_z + half_height],  # 后左上
+        [center_x - half_length, center_y - half_width, center_z - half_height]   # 后左下 
+    ])
+
+    return vertices
+
 def get_bb_coords_by_icao(client, i, screen_h, screen_w):
 
     aircraft_icao_data = client.getDREF("sim/aircraft/view/acf_ICAO")
@@ -244,8 +268,16 @@ def get_bb_coords_by_icao(client, i, screen_h, screen_w):
     cg_world = acf_wrl[:3]
 
     points = get_the_ponits(icao_code)
-
+    nose = points[0]
+    tail = points[1]
+    right = points[2]
+    left = points[3]
+    top = points[4]
+    bottom = points[5]
+    vertices = generate_bounding_box(nose, tail, right, left, top, bottom)
+    # print("vertices:", vertices)
     points_world = np.array([cg_world + R @ point for point in points])
+    
     # print("points_world:", points_world)
     # nose_world = cg_world + R @ nose_local
     # nose_world = R @ cg_world + nose_local
@@ -261,11 +293,13 @@ def get_bb_coords_by_icao(client, i, screen_h, screen_w):
     
     # Nose_x, Nose_y = get_projection_xy(points_world[0], acf_wrl, mv, proj, screen_h, screen_w)
     list_points_xy = get_projections_xy(points_world, acf_wrl, mv, proj, screen_h, screen_w)
+    vertices_world = np.array([cg_world + R @ point for point in vertices])
+    list_vertices_xy = get_projections_xy(vertices_world, acf_wrl, mv, proj, screen_h, screen_w) 
     # print("list_points_xy:", list_points_xy)
     # Tail_x, Tail_y = get_projection_xy(client, i, screen_h, screen_w)
 
     # return Nose_x, Nose_y
-    return list_points_xy
+    return list_points_xy, list_vertices_xy
     # acf_ndc[3] = 1.0 / acf_ndc[3]
     # acf_ndc[0] *= acf_ndc[3]
     # acf_ndc[1] *= acf_ndc[3]
@@ -330,7 +364,6 @@ def pixel_to_world(coords, screen_w, screen_h):
 
     return world_coords[:3]
 
-
 def run_data_generation(client):
     """Begin data generation by calling gen_data"""
 
@@ -350,7 +383,7 @@ def run_data_generation(client):
     client.sendDREF("sim/operation/override/override_joystick", 1)
     # Set starting position of ownship and intruder
     set_position(client, Aircraft(0, 0, 0, 0, heading=0, pitch=0, roll=0), ref)
-    set_position(client, Aircraft(1, 0, 20, 0, heading=-45, pitch=-45, roll=-45, gear=0), ref)
+    set_position(client, Aircraft(1, 0, 30, 0, heading=90, pitch=0, roll=0, gear=0), ref)
     # client.sendDREFs([dome_offset_heading, dome_offset_pitch], [0, 0])
     client.sendVIEW(85)
     time.sleep(1)
@@ -382,10 +415,13 @@ def run_data_generation(client):
 
     # nose_x, nose_y = get_bb_coords_by_icao(client, 1, screenshot.shape[0], screenshot.shape[1])
     # print(f"Nose coordinates: {nose_x, nose_y}")
-    points_list = get_bb_coords_by_icao(client, 1, screenshot.shape[0], screenshot.shape[1])
+    points_list, vertices_list = get_bb_coords_by_icao(client, 1, screenshot.shape[0], screenshot.shape[1])
     for i, point in enumerate(points_list):
         cv2.circle(screenshot, (int(point[0]), int(point[1])), 3, color_list_points[i], 1)
         cv2.putText(screenshot, name_list_points[i], (int(point[0]), int(point[1])), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color_list_points[i], 1)
+    
+    for vertex in vertices_list:
+        cv2.circle(screenshot, (int(vertex[0]), int(vertex[1])), 3, (0, 0, 255), -1)
     # cv2.circle(screenshot, (int(nose_x), int(nose_y)), 3, (0, 255, 0), -1)
     
     # Draw a cross at the center of the image
