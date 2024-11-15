@@ -31,7 +31,7 @@ dome_offset_heading = "sim/graphics/view/dome_offset_heading"
 dome_offset_pitch = "sim/graphics/view/dome_offset_pitch"
 # ref = [40.669332, -74.012405, 1000.0] #new york
 # ref = [24.979755, 121.451006, 500.0] #taiwan
-ref = [40.229635, -111.658833, 20000.0] #provo
+ref = [40.0, -111.658833, 5000.0] #provo
 # ref = [-22.943736, -43.177820, 500.0] #rio
 # ref = [38.870277, -77.030046, 500.0] #washington dc
 class Aircraft:
@@ -90,59 +90,77 @@ def get_acf_poes_in_radians(i):
     yaw = np.radians(yaw)
     pitch = np.radians(pitch)
     roll = np.radians(roll)
-    print(f"yaw: {yaw}, pitch: {pitch}, roll: {roll}")
-    return yaw, -pitch, -roll
+    print(f"yaw: {yaw}, pitch: {pitch}, roll: {roll} in radians")
+    return yaw, pitch, roll
+
+def get_acf_poes_in_euler(i):
+    # 獲取角度（假設角度為度數）
+    yaw = client.getDREF(f'sim/multiplayer/position/plane{i}_psi')[0]
+    pitch = client.getDREF(f'sim/multiplayer/position/plane{i}_the')[0]
+    roll = client.getDREF(f'sim/multiplayer/position/plane{i}_phi')[0]
+    print(f"yaw: {yaw}, pitch: {pitch}, roll: {roll} in degrees")
+    return yaw, pitch, roll
+
+from scipy.spatial.transform import Rotation as R
+
+def euler_to_quaternion(yaw, pitch, roll):
+    # 将角度转换为弧度
+    yaw = np.radians(yaw)
+    pitch = np.radians(pitch)
+    roll = np.radians(roll)
+
+    # 使用 scipy.spatial.transform.Rotation 进行转换
+    rotation = R.from_euler('yxz', [-yaw, pitch, roll])
+    quaternion = rotation.as_quat()  # 返回 (x, y, z, w)
+    # X-Plane uses East-Up-South (EUS) coordinates, convert to North-East-Down (NED)
+    # q_ned = np.array([quaternion[3], quaternion[0], -quaternion[2], -quaternion[1]])
+    # print(f"Quaternion in NED: {q_ned}")
+    return quaternion
+
+def quaternion_to_rotation_matrix(quaternion):
+    # 使用 scipy.spatial.transform.Rotation 进行转换
+    rotation = R.from_quat(quaternion)
+    rotation_matrix = rotation.as_matrix()
+    return rotation_matrix
 
 def get_rotation_matrix(yaw, pitch, roll):
+    quaternion = euler_to_quaternion(yaw, pitch, roll)
+    rotation_matrix = quaternion_to_rotation_matrix(quaternion)
+    print("Rotation Matrix: \n", rotation_matrix)
+    return rotation_matrix
 
-    Rz = np.array([
-        [np.cos(roll), -np.sin(roll), 0],
-        [np.sin(roll), np.cos(roll), 0],
-        [0, 0, 1]
-    ])
+# def get_rotation_matrix(yaw, pitch, roll):
 
-    Ry = np.array([
-        [np.cos(yaw), 0, np.sin(yaw)],
-        [0, 1, 0],
-        [-np.sin(yaw), 0, np.cos(yaw)]
-    ])
+#     # 将角度转换为弧度
 
-    Rx = np.array([
-        [1, 0, 0],
-        [0, np.cos(pitch), -np.sin(pitch)],
-        [0, np.sin(pitch), np.cos(pitch)]
-    ])
+#     Rz = np.array([
+#         [np.cos(roll), -np.sin(roll), 0],
+#         [np.sin(roll), np.cos(roll), 0],
+#         [0, 0, 1]
+#     ])
 
-    R = Ry @ Rx @ Rz
-    return R
+#     Ry = np.array([
+#         [np.cos(yaw), 0, np.sin(yaw)],
+#         [0, 1, 0],
+#         [-np.sin(yaw), 0, np.cos(yaw)]
+#     ])
 
-def get_bb_coords_by_icao(client, i, screen_h, screen_w):
-    # retrieve x,y,z position of intruder
-    acf_wrl = np.array([
-        client.getDREF((f'sim/multiplayer/position/plane{i}_x'))[0],
-        client.getDREF((f'sim/multiplayer/position/plane{i}_y'))[0],
-        client.getDREF((f'sim/multiplayer/position/plane{i}_z'))[0],
-        1.0
-    ])
-    R = get_rotation_matrix(*get_acf_poes_in_radians(i))
-    nose_distance = 2.5
-    nose_local = np.array([0, 0, nose_distance]) # nose is 2.5 meters in front of the cg (FRD)
-    cg_world = acf_wrl[:3]
-    nose_world = cg_world + R @ nose_local
-    print("nose_world:", nose_world)
+#     Rx = np.array([
+#         [1, 0, 0],
+#         [0, np.cos(pitch), -np.sin(pitch)],
+#         [0, np.sin(pitch), np.cos(pitch)]
+#     ])
 
-    aircraft_icao_data = client.getDREF("sim/aircraft/view/acf_ICAO")
-    byte_data = bytes(int(x) for x in aircraft_icao_data if x != 0)
-    icao_code = byte_data.decode('ascii')
-    print("ICAO code:", icao_code)
+#     R = Rz @ Ry @ Rx
+#     print("R = ", R)
+#     return R
+
+def get_projection_xy(point_world, acf_wrl, mv, proj, screen_h, screen_w):
     
-    mv = client.getDREF("sim/graphics/view/world_matrix")
-    proj = client.getDREF("sim/graphics/view/projection_matrix_3d")
-
-    nose_wrl = np.append(nose_world, 1.0)
-    diff = acf_wrl - nose_wrl
-    print("diff:", diff)    
-    acf_eye = mult_matrix_vec(mv, nose_wrl)
+    point_wrl = np.append(point_world, 1.0)
+    diff = acf_wrl - point_wrl
+    print("acf_wrl - point_wrl = ", diff)    
+    acf_eye = mult_matrix_vec(mv, point_wrl)
     acf_ndc = mult_matrix_vec(proj, acf_eye)
     
     acf_ndc[3] = 1.0 / acf_ndc[3]
@@ -154,6 +172,102 @@ def get_bb_coords_by_icao(client, i, screen_h, screen_w):
     final_y = screen_h * (acf_ndc[1] * 0.5 + 0.5)
 
     return final_x, screen_h - final_y
+
+def get_projections_xy(points_world, acf_wrl, mv, proj, screen_h, screen_w):
+    projected_points = []
+    for point_world in points_world:
+        point_wrl = np.append(point_world, 1.0)
+        acf_eye = mult_matrix_vec(mv, point_wrl)
+        acf_ndc = mult_matrix_vec(proj, acf_eye)
+
+        acf_ndc[3] = 1.0 / acf_ndc[3]
+        acf_ndc[0] *= acf_ndc[3]
+        acf_ndc[1] *= acf_ndc[3]
+        acf_ndc[2] *= acf_ndc[3]
+
+        final_x = screen_w * (acf_ndc[0] * 0.5 + 0.5)
+        final_y = screen_h * (acf_ndc[1] * 0.5 + 0.5)
+
+        projected_points.append((final_x, screen_h - final_y))
+    return projected_points
+
+def get_the_ponits(icao_code):
+    
+    if  icao_code == "C172":
+        points = np.array([
+            [0, 0, -2.5],   #Nose of the aircraft
+            [0, 0, 5.72],   #Tail of the aircraft
+            [5.5, 0, 0],    #Right wing tip
+            [-5.5, 0, 0],   #Left wing tip
+            [0, 2, 5.72],      #Top of the aircraft
+            [0, -1, 0]      #Bottom of the aircraft
+        ])
+    elif icao_code == "B738":
+        points = np.array([
+            [0, 0, -3.5],
+            [0, 0, 10.5],
+            [10.5, 0, 0],
+            [-10.5, 0, 0],
+            [0, 2, 0],
+            [0, -1, 0]
+        ])
+    
+
+    return points
+def get_bb_coords_by_icao(client, i, screen_h, screen_w):
+
+    aircraft_icao_data = client.getDREF("sim/aircraft/view/acf_ICAO")
+    byte_data = bytes(int(x) for x in aircraft_icao_data if x != 0)
+    icao_code = byte_data.decode('ascii')
+    # print("ICAO code:", icao_code)
+
+    # retrieve x,y,z position of intruder
+    acf_wrl = np.array([
+        client.getDREF((f'sim/multiplayer/position/plane{i}_x'))[0],
+        client.getDREF((f'sim/multiplayer/position/plane{i}_y'))[0],
+        client.getDREF((f'sim/multiplayer/position/plane{i}_z'))[0],
+        1.0
+    ])
+    mv = client.getDREF("sim/graphics/view/world_matrix")
+    proj = client.getDREF("sim/graphics/view/projection_matrix_3d")
+
+    R = get_rotation_matrix(*get_acf_poes_in_euler(i))
+    # nose_distance = 2.5
+    # nose_local = np.array([0, 0, nose_distance]) # nose is 2.5 meters in front of the cg (FRD)
+    cg_world = acf_wrl[:3]
+
+    points = get_the_ponits(icao_code)
+
+    points_world = np.array([cg_world + R @ point for point in points])
+    # print("points_world:", points_world)
+    # nose_world = cg_world + R @ nose_local
+    # nose_world = R @ cg_world + nose_local
+
+    # print("nose_world:", nose_world)
+
+    # nose_wrl = np.append(nose_world, 1.0)
+    # diff = acf_wrl - nose_wrl
+    # print("diff:", diff)
+
+    # acf_eye = mult_matrix_vec(mv, nose_wrl)
+    # acf_ndc = mult_matrix_vec(proj, acf_eye)
+    
+    # Nose_x, Nose_y = get_projection_xy(points_world[0], acf_wrl, mv, proj, screen_h, screen_w)
+    list_points_xy = get_projections_xy(points_world, acf_wrl, mv, proj, screen_h, screen_w)
+    # print("list_points_xy:", list_points_xy)
+    # Tail_x, Tail_y = get_projection_xy(client, i, screen_h, screen_w)
+
+    # return Nose_x, Nose_y
+    return list_points_xy
+    # acf_ndc[3] = 1.0 / acf_ndc[3]
+    # acf_ndc[0] *= acf_ndc[3]
+    # acf_ndc[1] *= acf_ndc[3]
+    # acf_ndc[2] *= acf_ndc[3]
+
+    # final_x = screen_w * (acf_ndc[0] * 0.5 + 0.5)
+    # final_y = screen_h * (acf_ndc[1] * 0.5 + 0.5)
+
+    # return final_x, screen_h - final_y
 
 
 
@@ -215,21 +329,21 @@ def run_data_generation(client):
 
     client.pauseSim(True)
     
-    aircraft_desc = client.getDREF("sim/aircraft/view/acf_descrip")
-    byte_data = bytes(int(x) for x in aircraft_desc if x != 0)
-    description = byte_data.decode('ascii')
-    print("acf_descrip:", description)
+    # aircraft_desc = client.getDREF("sim/aircraft/view/acf_descrip")
+    # byte_data = bytes(int(x) for x in aircraft_desc if x != 0)
+    # description = byte_data.decode('ascii')
+    # print("acf_descrip:", description)
 
-    aircraft_icao_data = client.getDREF("sim/aircraft/view/acf_ICAO")
-    byte_data = bytes(int(x) for x in aircraft_icao_data if x != 0)
-    icao_code = byte_data.decode('ascii')
-    print("ICAO code:", icao_code)
+    # aircraft_icao_data = client.getDREF("sim/aircraft/view/acf_ICAO")
+    # byte_data = bytes(int(x) for x in aircraft_icao_data if x != 0)
+    # icao_code = byte_data.decode('ascii')
+    # print("ICAO code:", icao_code)
 
     # client.pauseSim(False)
     client.sendDREF("sim/operation/override/override_joystick", 1)
     # Set starting position of ownship and intruder
     set_position(client, Aircraft(0, 0, 0, 0, 0, pitch=0, roll=0), ref)
-    set_position(client, Aircraft(1, 0, 20, 0, 100, pitch=0, roll=0, gear=0), ref)
+    set_position(client, Aircraft(1, 0, 20, 0, 0, pitch=-90, roll=90, gear=0), ref)
     # client.sendDREFs([dome_offset_heading, dome_offset_pitch], [0, 0])
     client.sendVIEW(85)
     time.sleep(1)
@@ -259,12 +373,16 @@ def run_data_generation(client):
     print(f"Bounding box coordinates: {bbc_x, bbc_y}")
     cv2.circle(screenshot, (int(bbc_x), int(bbc_y)), 1, (0, 0, 255), -1)
 
-    nose_x, nose_y = get_bb_coords_by_icao(client, 1, screenshot.shape[0], screenshot.shape[1])
-    print(f"Nose coordinates: {nose_x, nose_y}")
-    cv2.circle(screenshot, (int(nose_x), int(nose_y)), 3, (0, 255, 0), -1)
+    # nose_x, nose_y = get_bb_coords_by_icao(client, 1, screenshot.shape[0], screenshot.shape[1])
+    # print(f"Nose coordinates: {nose_x, nose_y}")
+    points_list = get_bb_coords_by_icao(client, 1, screenshot.shape[0], screenshot.shape[1])
+    for point in points_list:
+        cv2.circle(screenshot, (int(point[0]), int(point[1])), 3, (0, 255, ), 1)
+    # cv2.circle(screenshot, (int(nose_x), int(nose_y)), 3, (0, 255, 0), -1)
+    
     # Draw a cross at the center of the image
     center_x, center_y = screenshot.shape[1] // 2, screenshot.shape[0] // 2
-    print(f"Center coordinates: {center_x, center_y}")
+    # print(f"Center coordinates: {center_x, center_y}")
     cv2.line(screenshot, (center_x - 10, center_y), (center_x + 10, center_y), (0, 255, 0), 1)
     cv2.line(screenshot, (center_x, center_y - 10), (center_x, center_y + 10), (0, 255, 0), 1)
     cv2.imshow('X-Plane Screenshot', screenshot)
