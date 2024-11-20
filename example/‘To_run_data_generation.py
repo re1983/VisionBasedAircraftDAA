@@ -391,23 +391,17 @@ def pixel_to_world(coords, screen_w, screen_h):
 
     return world_coords[:3]
 
+
+def Draw_a_cross_at_the_center_of_the_image(screenshot):
+    center_x, center_y = screenshot.shape[1] // 2, screenshot.shape[0] // 2
+    print(f"Image Center coordinates: {center_x, center_y}")
+    cv2.line(screenshot, (center_x - 10, center_y), (center_x + 10, center_y), (0, 200, 0), 1)
+    cv2.line(screenshot, (center_x, center_y - 10), (center_x, center_y + 10), (0, 200, 0), 1)
+    
+
 def run_data_generation(client):
     """Begin data generation by calling gen_data"""
-
-    client.pauseSim(True)
-    
-    # aircraft_desc = client.getDREF("sim/aircraft/view/acf_descrip")
-    # byte_data = bytes(int(x) for x in aircraft_desc if x != 0)
-    # description = byte_data.decode('ascii')
-    # print("acf_descrip:", description)
-
-    # aircraft_icao_data = client.getDREF("sim/aircraft/view/acf_ICAO")
-    # byte_data = bytes(int(x) for x in aircraft_icao_data if x != 0)
-    # icao_code = byte_data.decode('ascii')
-    # print("ICAO code:", icao_code)
-
     # client.pauseSim(False)
-    client.sendDREF("sim/operation/override/override_joystick", 1)
     # Set starting position of ownship and intruder
     set_position(client, Aircraft(0, 0, 0, 0, heading=0, pitch=0, roll=0), ref)
     set_position(client, Aircraft(1, 0, 30, 0, heading=45, pitch=45, roll=45, gear=0), ref)
@@ -440,8 +434,7 @@ def run_data_generation(client):
     print(f"Bounding box coordinates: {bbc_x, bbc_y}")
     cv2.circle(screenshot, (int(bbc_x), int(bbc_y)), 1, (0, 0, 255), -1)
 
-    # nose_x, nose_y = get_bb_coords_by_icao(client, 1, screenshot.shape[0], screenshot.shape[1])
-    # print(f"Nose coordinates: {nose_x, nose_y}")
+
     points_list, vertices_list = get_bb_coords_by_icao(client, 1, screenshot.shape[0], screenshot.shape[1])
     for i, point in enumerate(points_list):
         cv2.circle(screenshot, (int(point[0]), int(point[1])), 3, color_list_points[i], 1)
@@ -456,45 +449,9 @@ def run_data_generation(client):
     # cv2.circle(screenshot, (int(nose_x), int(nose_y)), 3, (0, 255, 0), -1)
     
     # Draw a cross at the center of the image
-    center_x, center_y = screenshot.shape[1] // 2, screenshot.shape[0] // 2
-    # print(f"Center coordinates: {center_x, center_y}")
-    cv2.line(screenshot, (center_x - 10, center_y), (center_x + 10, center_y), (0, 127, 0), 1)
-    cv2.line(screenshot, (center_x, center_y - 10), (center_x, center_y + 10), (0, 127, 0), 1)
+    Draw_a_cross_at_the_center_of_the_image(screenshot)
     cv2.imshow('X-Plane Screenshot', screenshot)
 
-
-    # i = 1
-    # acf_poes = np.array([
-    #     client.getDREF((f'sim/multiplayer/position/plane{i}_psi'))[0],
-    #     client.getDREF((f'sim/multiplayer/position/plane{i}_the'))[0],
-    #     client.getDREF((f'sim/multiplayer/position/plane{i}_phi'))[0],
-    #     1.0
-    # ])
-    # print(f"acf_poes: {acf_poes}")
-
-
-    # cv2.setMouseCallback('X-Plane Screenshot', mouse_callback)  # 设置鼠标回调函数
-
-    # zoom_factor = 2  # 放大倍數
-    # zoom_size = 100  # 放大鏡的大小
-
-    # while True:
-    #     if clicked_coords:
-    #         x, y = clicked_coords
-    #         x1, y1 = max(0, x - zoom_size), max(0, y - zoom_size)
-    #         x2, y2 = min(screenshot.shape[1], x + zoom_size), min(screenshot.shape[0], y + zoom_size)
-    #         zoomed_region = screenshot[y1:y2, x1:x2]
-    #         zoomed_region = cv2.resize(zoomed_region, None, fx=zoom_factor, fy=zoom_factor, interpolation=cv2.INTER_LINEAR)
-    #         zoomed_h, zoomed_w = zoomed_region.shape[:2]
-    #         overlay = screenshot.copy()
-    #         overlay[0:zoomed_h, 0:zoomed_w] = zoomed_region
-    #         cv2.rectangle(overlay, (0, 0), (zoomed_w, zoomed_h), (255, 0, 0), 2)
-    #         cv2.imshow('X-Plane Screenshot', overlay)
-    #     else:
-    #         cv2.imshow('X-Plane Screenshot', screenshot)
-
-    #     if cv2.waitKey(1) & 0xFF == 27:
-    #         break
     while True:
         if cv2.waitKey(1) & 0xFF == 27:
             break
@@ -504,6 +461,8 @@ def run_data_generation(client):
         world_coords = pixel_to_world(clicked_coords, screenshot.shape[1], screenshot.shape[0])
         print(f"World coordinates: {world_coords}")
 
-    
+
 with xpc.XPlaneConnect() as client:
+    client.pauseSim(True)
+    client.sendDREF("sim/operation/override/override_joystick", 1)
     run_data_generation(client)
