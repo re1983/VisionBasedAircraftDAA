@@ -137,32 +137,6 @@ def get_rotation_matrix(yaw, pitch, roll):
     rotation_matrix = rotation.as_matrix()
     return rotation_matrix
 
-# def get_rotation_matrix(yaw, pitch, roll):
-
-#     # 将角度转换为弧度
-
-#     Rz = np.array([
-#         [np.cos(roll), -np.sin(roll), 0],
-#         [np.sin(roll), np.cos(roll), 0],
-#         [0, 0, 1]
-#     ])
-
-#     Ry = np.array([
-#         [np.cos(yaw), 0, np.sin(yaw)],
-#         [0, 1, 0],
-#         [-np.sin(yaw), 0, np.cos(yaw)]
-#     ])
-
-#     Rx = np.array([
-#         [1, 0, 0],
-#         [0, np.cos(pitch), -np.sin(pitch)],
-#         [0, np.sin(pitch), np.cos(pitch)]
-#     ])
-
-#     R = Rz @ Ry @ Rx
-#     print("R = ", R)
-#     return R
-
 def get_projection_xy(point_world, acf_wrl, mv, proj, screen_h, screen_w):
     
     point_wrl = np.append(point_world, 1.0)
@@ -220,31 +194,7 @@ def get_the_ponits(icao_code):
             [0, -1, 0]
         ])
     
-
     return points
-
-def generate_bounding_box(nose, tail, right, left, top, bottom):
-
-    center_z = (nose[2] + tail[2]) / 2
-    center_x = (right[0] + left[0]) / 2
-    center_y = (top[1] + bottom[1]) / 2
-
-    half_length = np.linalg.norm(np.array(nose) - np.array(tail)) / 2
-    half_width = np.linalg.norm(np.array(right) - np.array(left)) / 2
-    half_height = np.linalg.norm(np.array(top) - np.array(bottom)) / 2
-
-    vertices = np.array([
-        [center_x + half_width, center_y + half_height, center_z + half_length],  # 前右上
-        [center_x + half_width, center_y - half_height, center_z + half_length],  # 前右下
-        [center_x - half_width, center_y + half_height, center_z + half_length],  # 前左上
-        [center_x - half_width, center_y - half_height, center_z + half_length],  # 前左下
-        [center_x + half_width, center_y + half_height, center_z - half_length],  # 后右上
-        [center_x + half_width, center_y - half_height, center_z - half_length],  # 后右下
-        [center_x - half_width, center_y + half_height, center_z - half_length],  # 后左上
-        [center_x - half_width, center_y - half_height, center_z - half_length]   # 后左下 
-    ])
-    print("vertices:\n", vertices)
-    return vertices
 
 def generate_bounding_box_GC(nose, tail, right, left, top, bottom):
     # 将所有点放入一个数组
@@ -290,10 +240,7 @@ def get_bb_coords_by_icao(client, i, screen_h, screen_w):
     mv = client.getDREF("sim/graphics/view/world_matrix")
     proj = client.getDREF("sim/graphics/view/projection_matrix_3d")
     R = get_rotation_matrix(*get_acf_poes_in_euler(i))
-    # nose_distance = 2.5
-    # nose_local = np.array([0, 0, nose_distance]) # nose is 2.5 meters in front of the cg (FRD)
     cg_world = acf_wrl[:3]
-
     points = get_the_ponits(icao_code)
     nose = points[0]
     tail = points[1]
@@ -302,42 +249,12 @@ def get_bb_coords_by_icao(client, i, screen_h, screen_w):
     top = points[4]
     bottom = points[5]
     vertices = generate_bounding_box_GC(nose, tail, right, left, top, bottom)
-    # print("vertices:", vertices)
     points_world = np.array([cg_world + R @ point for point in points])
-    
-    # print("points_world:", points_world)
-    # nose_world = cg_world + R @ nose_local
-    # nose_world = R @ cg_world + nose_local
-
-    # print("nose_world:", nose_world)
-
-    # nose_wrl = np.append(nose_world, 1.0)
-    # diff = acf_wrl - nose_wrl
-    # print("diff:", diff)
-
-    # acf_eye = mult_matrix_vec(mv, nose_wrl)
-    # acf_ndc = mult_matrix_vec(proj, acf_eye)
-    
-    # Nose_x, Nose_y = get_projection_xy(points_world[0], acf_wrl, mv, proj, screen_h, screen_w)
     list_points_xy = get_projections_xy(points_world, acf_wrl, mv, proj, screen_h, screen_w)
     vertices_world = np.array([cg_world + R @ point for point in vertices])
     list_vertices_xy = get_projections_xy(vertices_world, acf_wrl, mv, proj, screen_h, screen_w) 
-    # print("list_points_xy:", list_points_xy)
-    # Tail_x, Tail_y = get_projection_xy(client, i, screen_h, screen_w)
 
-    # return Nose_x, Nose_y
     return list_points_xy, list_vertices_xy
-    # acf_ndc[3] = 1.0 / acf_ndc[3]
-    # acf_ndc[0] *= acf_ndc[3]
-    # acf_ndc[1] *= acf_ndc[3]
-    # acf_ndc[2] *= acf_ndc[3]
-
-    # final_x = screen_w * (acf_ndc[0] * 0.5 + 0.5)
-    # final_y = screen_h * (acf_ndc[1] * 0.5 + 0.5)nose
-
-    # return final_x, screen_h - final_y
-
-
 
 def projection_matrix_to_intrinsics(projection_matrix, width, height):
     # # fx, fy
@@ -353,7 +270,6 @@ def set_position(client, aircraft, ref):
     """Set the position of the aircraft in the simulator"""
     p = pm.enu2geodetic(aircraft.e, aircraft.n, aircraft.u, ref[0], ref[1], ref[2]) #east, north, up
     client.sendPOSI([*p, aircraft.p, aircraft.r, aircraft.h, aircraft.g], aircraft.id)
-
 
 # 定义一个全局变量来存储点击坐标
 clicked_coords = None
@@ -397,14 +313,23 @@ def Draw_a_cross_at_the_center_of_the_image(screenshot):
     print(f"Image Center coordinates: {center_x, center_y}")
     cv2.line(screenshot, (center_x - 10, center_y), (center_x + 10, center_y), (0, 200, 0), 1)
     cv2.line(screenshot, (center_x, center_y - 10), (center_x, center_y + 10), (0, 200, 0), 1)
-    
+
+def Draw_Convex_Hull_bounding_box_for_six_points(screenshot, points_list):
+    hull = cv2.convexHull(np.array(points_list, dtype=np.int32))
+    cv2.polylines(screenshot, [hull], isClosed=True, color=(0, 255, 0), thickness=2)
+    x, y, w, h = cv2.boundingRect(hull)
+    cv2.rectangle(screenshot, (x, y), (x + w, y + h), (255, 0, 0), 2)
+
+def Draw_bounding_cube_for_eigth_corners_vertices(screenshot, vertices_list):
+    for vertex in vertices_list:
+        cv2.circle(screenshot, (int(vertex[0]), int(vertex[1])), 3, (0, 0, 255), -1)
 
 def run_data_generation(client):
     """Begin data generation by calling gen_data"""
     # client.pauseSim(False)
     # Set starting position of ownship and intruder
     set_position(client, Aircraft(0, 0, 0, 0, heading=0, pitch=0, roll=0), ref)
-    set_position(client, Aircraft(1, 0, 30, 0, heading=45, pitch=45, roll=45, gear=0), ref)
+    set_position(client, Aircraft(1, 0, 50, 0, heading=-90, pitch=0, roll=90, gear=0), ref)
     # client.sendDREFs([dome_offset_heading, dome_offset_pitch], [0, 0])
     client.sendVIEW(85)
     time.sleep(1)
@@ -417,11 +342,8 @@ def run_data_generation(client):
         screenshot = so.capture_xplane_window(hwnd, abs_x, abs_y)
 
     print(f"Screenshot shape: {screenshot.shape[1], screenshot.shape[0]}")
-
-    ref_str = str(ref[0]) + "_" + str(ref[1]) + "_" + str(ref[2])
-    print(f"Reference coordinates: {ref_str}")
+    print(f"Reference coordinates: {ref}")
     
-
     mv = client.getDREF("sim/graphics/view/world_matrix")
     proj = client.getDREF("sim/graphics/view/projection_matrix_3d")
     projection_matrix_3d = np.reshape(proj, (4, 4)).T
@@ -434,22 +356,16 @@ def run_data_generation(client):
     print(f"Bounding box coordinates: {bbc_x, bbc_y}")
     cv2.circle(screenshot, (int(bbc_x), int(bbc_y)), 1, (0, 0, 255), -1)
 
-
     points_list, vertices_list = get_bb_coords_by_icao(client, 1, screenshot.shape[0], screenshot.shape[1])
+
     for i, point in enumerate(points_list):
         cv2.circle(screenshot, (int(point[0]), int(point[1])), 3, color_list_points[i], 1)
         cv2.putText(screenshot, name_list_points[i], (int(point[0]), int(point[1])), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color_list_points[i], 1)
-    # Draw Convex Hull bounding box for points_list
-    hull = cv2.convexHull(np.array(points_list, dtype=np.int32))
-    cv2.polylines(screenshot, [hull], isClosed=True, color=(0, 255, 0), thickness=2)
-    x, y, w, h = cv2.boundingRect(hull)
-    cv2.rectangle(screenshot, (x, y), (x + w, y + h), (255, 0, 0), 2)
-    for vertex in vertices_list:
-        cv2.circle(screenshot, (int(vertex[0]), int(vertex[1])), 3, (0, 0, 255), -1)
-    # cv2.circle(screenshot, (int(nose_x), int(nose_y)), 3, (0, 255, 0), -1)
     
-    # Draw a cross at the center of the image
+    Draw_bounding_cube_for_eigth_corners_vertices(screenshot, vertices_list)
+    Draw_Convex_Hull_bounding_box_for_six_points(screenshot, points_list)
     Draw_a_cross_at_the_center_of_the_image(screenshot)
+
     cv2.imshow('X-Plane Screenshot', screenshot)
 
     while True:
