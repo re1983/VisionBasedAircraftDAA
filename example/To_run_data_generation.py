@@ -329,7 +329,7 @@ def run_data_generation(client):
     # client.pauseSim(False)
     # Set starting position of ownship and intruder
     set_position(client, Aircraft(0, 0, 0, 0, heading=0, pitch=0, roll=0), ref)
-    set_position(client, Aircraft(1, 0, 50, 0, heading=-90, pitch=0, roll=90, gear=0), ref)
+    set_position(client, Aircraft(1, 0, 1000, 300, heading=90, pitch=0, roll=0, gear=0), ref)
     # client.sendDREFs([dome_offset_heading, dome_offset_pitch], [0, 0])
     client.sendVIEW(85)
     time.sleep(1)
