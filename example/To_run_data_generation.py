@@ -359,6 +359,11 @@ def Draw_Convex_Hull_bounding_box_for_six_points(screenshot, points_list):
     cv2.polylines(screenshot, [hull], isClosed=True, color=(0, 255, 0), thickness=1)
     x, y, w, h = cv2.boundingRect(hull)
     cv2.rectangle(screenshot, (x, y), (x + w, y + h), (255, 0, 0), 1)
+    # Oriented Bounding Boxes Object
+    OBB = cv2.minAreaRect(hull)
+    obb_box = cv2.boxPoints(OBB)
+    obb_box = np.int0(obb_box)
+    cv2.drawContours(screenshot, [obb_box], 0, (0, 0, 255), 1)
 
 def Draw_bounding_cube_for_eigth_corners_vertices(screenshot, vertices_list):
     for vertex in vertices_list:
@@ -370,10 +375,10 @@ def run_data_generation(client):
     # Set starting position of ownship and intruder
     set_position(client, Aircraft(0, 0, 0, 0, heading=0, pitch=0, roll=0), ref)
     # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    set_position(client, Aircraft(1, 0, 20, 0, heading=45, pitch=45, roll=45, gear=0), ref)
+    set_position(client, Aircraft(1, 0, 6000, 0, heading=90, pitch=0, roll=0, gear=0), ref)
     # client.sendDREFs([dome_offset_heading, dome_offset_pitch], [0, 0])
     client.sendVIEW(85)
-    time.sleep(1)
+    # time.sleep(0.5)
     if platform.system() == "Windows":
         hwnd, abs_x, abs_y, width, height = wcw.get_xplane_window_info(window_title)
         screenshot = wcw.capture_xplane_window(hwnd, abs_x, abs_y, width, height)
@@ -421,6 +426,7 @@ def run_data_generation(client):
 
 with xpc.XPlaneConnect() as client:
     client.pauseSim(False)
+    time.sleep(0.5)
     client.pauseSim(True)
     client.sendDREF("sim/operation/override/override_joystick", 1)
     run_data_generation(client)
