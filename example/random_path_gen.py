@@ -32,11 +32,20 @@ def generate_random_points_between_two_trapezoids(FOV, near1, far1, near2, far2,
 
     # 定義兩個梯形的邊
     edges1 = [(P1_1, P2_1), (P2_1, P4_1), (P4_1, P3_1), (P3_1, P1_1)]
+    # print(edges1)
     edges2 = [(P1_2, P2_2), (P2_2, P4_2), (P4_2, P3_2), (P3_2, P1_2)]
 
     # 隨機選擇邊並生成點
-    edge1 = edges1[np.random.choice(len(edges1))]
-    edge2 = edges2[np.random.choice(len(edges2))]
+    random_edge1_index = np.random.choice(len(edges1))
+    while random_edge1_index == 0:
+        random_edge1_index = np.random.choice(len(edges1))
+    print(random_edge1_index)
+    edge1 = edges1[random_edge1_index]
+    random_edge2_index = np.random.choice(len(edges2))
+    while random_edge2_index == random_edge1_index:
+        random_edge2_index = np.random.choice(len(edges2))
+    print(random_edge2_index)
+    edge2 = edges2[random_edge2_index]
 
     point1 = generate_random_point_on_edge(*edge1)
     point2 = generate_random_point_on_edge(*edge2)
@@ -80,11 +89,11 @@ def plot_two_trapezoids_with_random_points(FOV, near1, far1, near2, far2, offset
     plt.show()
 
 # 測試參數
-FOV = 90
+FOV = 60
 near1, far1 = 50, 6000
 near2, far2 = 50, 6000 
 offset1 = (0, 0)  # 梯形1位置
-offset2 = (0, 300)  # 梯形2位置
+offset2 = (0, 550)  # 梯形2位置
 
 # 繪製結果
 plot_two_trapezoids_with_random_points(FOV, near1, far1, near2, far2, offset1, offset2)
