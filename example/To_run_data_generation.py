@@ -359,7 +359,7 @@ def Draw_Convex_Hull_bounding_box_for_six_points(screenshot, points_list):
     cv2.polylines(screenshot, [hull], isClosed=True, color=(0, 255, 0), thickness=1)
     x, y, w, h = cv2.boundingRect(hull)
     cv2.rectangle(screenshot, (x, y), (x + w, y + h), (255, 0, 0), 1)
-    # Oriented Bounding Boxes Object
+    # Oriented Bounding Boxes Object https://docs.opencv.org/4.x/dd/d49/tutorial_py_contour_features.html
     OBB = cv2.minAreaRect(hull)
     obb_box = cv2.boxPoints(OBB)
     obb_box = np.int0(obb_box)
