@@ -16,10 +16,13 @@ def generate_trapezoid_vertices(FOV, near_distance, far_distance, offset_x=0, of
     return P1, P2, P3, P4
 
 def generate_random_point_on_edge(P1, P2):
-    """
-    在給定的邊 P1->P2 上隨機生成一個點。
-    """
+
     t = np.random.uniform(0, 1)  # 隨機比例
+    return (1 - t) * P1 + t * P2
+
+def generate_random_point_on_edge_normal(P1, P2):
+
+    t = np.clip(np.random.normal(0.5, 1/6), 0, 1)
     return (1 - t) * P1 + t * P2
 
 def generate_random_points_between_two_trapezoids(FOV, near1, far1, near2, far2, offset1=(0, 0), offset2=(0, 0)):
@@ -49,6 +52,8 @@ def generate_random_points_between_two_trapezoids(FOV, near1, far1, near2, far2,
 
     point1 = generate_random_point_on_edge(*edge1)
     point2 = generate_random_point_on_edge(*edge2)
+    # point1 = generate_random_point_on_edge_normal(*edge1)
+    # point2 = generate_random_point_on_edge_normal(*edge2)
 
     return point1, point2
 

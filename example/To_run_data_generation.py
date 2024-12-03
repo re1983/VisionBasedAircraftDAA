@@ -175,7 +175,7 @@ def get_projections_xy(points_world, acf_wrl, mv, proj, screen_h, screen_w):
 
 def get_the_geometry_ponits(icao_code):
     
-    if  icao_code == "C172": # Cessna Skyhawk
+    if  icao_code == "C172": # Cessna Skyhawk https://en.wikipedia.org/wiki/Cessna_172
         points = np.array([
             [0, -0.05, -2.5],   #Nose of the aircraft
             [0, 0, 5.82],   #Tail of the aircraft
@@ -183,9 +183,11 @@ def get_the_geometry_ponits(icao_code):
             [-5.5, 0.7, 0],   #Left wing tip
             [0, 1.52, 5.82],   #Top of the aircraft
             [0, -1.37, 0]      #Bottom of the aircraft
-        ]) # done
+        ])
+        cruise_speed = 122.0 # 122 kn (140 mph, 226 km/h)
+         # done
 
-    elif icao_code == "BE58": # Beechcraft Baron 58
+    elif icao_code == "BE58": # Beechcraft Baron 58 https://en.wikipedia.org/wiki/Beechcraft_Baron
         points = np.array([
             [0, -0.3, -3],   #Nose of the aircraft
             [0, 0.15, 5.85],   #Tail of the aircraft
@@ -194,46 +196,57 @@ def get_the_geometry_ponits(icao_code):
             [0, 1.9, 5.85],   #Top of the aircraft
             [0, -1.2, 0]      #Bottom of the aircraft
         ])
+        cruise_speed = 180.0 # 180 kn (210 mph, 330 km/h)
+        # done
 
-    # elif icao_code == "BE9L": # Beechcraft King Air C90
-    #     points = np.array([
-    #         [0, 0.4, -3.6],   #Nose of the aircraft
-    #         [0, 0.75, 7.3],   #Tail of the aircraft
-    #         [7.9, 1, 0.5],    #Right wing tip
-    #         [-7.9, 1, 0.5],   #Left wing tip
-    #         [0, 3.4, 7.3],   #Top of the aircraft
-    #         [0, -1.0, -1.5]      #Bottom of the aircraft
-    #     ]) # done
+    elif icao_code == "BE9L": # Beechcraft King Air C90 https://en.wikipedia.org/wiki/Beechcraft_King_Air
+        points = np.array([
+            [0, 0.4, -3.6],   #Nose of the aircraft
+            [0, 0.75, 7.3],   #Tail of the aircraft
+            [7.9, 1, 0.5],    #Right wing tip
+            [-7.9, 1, 0.5],   #Left wing tip
+            [0, 3.4, 7.3],   #Top of the aircraft
+            [0, -1.0, -1.5]      #Bottom of the aircraft
+        ]) # done
+        cruise_speed = 226.0 # 226 kn (260 mph, 426 km/h)
+         # done
 
-    elif icao_code == "B738": # Boeing 737-800
+    elif icao_code == "B738": # Boeing 737-800 https://en.wikipedia.org/wiki/Boeing_737
         points = np.array([
-            [0, -0.05, -2.5],   #Nose of the aircraft
-            [0, 0, 7.3],   #Tail of the aircraft
-            [5.5, 0.7, 0],    #Right wing tip
-            [-5.5, 0.7, 0],   #Left wing tip
-            [0, 1.52, 5.82],   #Top of the aircraft
-            [0, -1.37, 0]      #Bottom of the aircraft
+            [0, 0.1, -18.5],   #Nose of the aircraft
+            [0, 0, 22],   #Tail of the aircraft
+            [18, 3, 7],    #Right wing tip
+            [-18, 3, 7],   #Left wing tip
+            [0, 9.7, 21],   #Top of the aircraft
+            [0, -2.85, -0]      #Bottom of the aircraft
         ])
-    elif icao_code == "SF50": # Cirrus Vision SF50
+        cruise_speed = 453.0 # Mach 0.785 (453 kn; 838 km/h; 521 mph)
+
+    elif icao_code == "SF50": # Cirrus Vision SF50 https://en.wikipedia.org/wiki/Cirrus_Vision_SF50
         points = np.array([
-            [0, -0.05, -2.5],   #Nose of the aircraft
-            [0, 0, 5.82],   #Tail of the aircraft
-            [5.5, 0.7, 0],    #Right wing tip
-            [-5.5, 0.7, 0],   #Left wing tip
-            [0, 1.52, 5.82],   #Top of the aircraft
-            [0, -1.37, 0]      #Bottom of the aircraft
+            [0, -0.2, -3.7],   #Nose of the aircraft
+            [0, 0.0, 5.82],   #Tail of the aircraft
+            [5.9, -0.2, 1],    #Right wing tip
+            [-5.9, -0.2, 1],   #Left wing tip
+            [0, 1.7, 5.82],   #Top of the aircraft
+            [0, -1.5, 0]      #Bottom of the aircraft
         ])
-    elif icao_code == "S76": # Sikorsky S-76C
+        cruise_speed = 305.0 # 305 kn (351 mph, 565 km/h)
+        # done
+
+    elif icao_code == "S76": # Sikorsky S-76C https://en.wikipedia.org/wiki/Sikorsky_S-76
         points = np.array([
-            [0, -0.05, -2.5],   #Nose of the aircraft
-            [0, 0, 5.82],   #Tail of the aircraft
-            [5.5, 0.7, 0],    #Right wing tip
-            [-5.5, 0.7, 0],   #Left wing tip
-            [0, 1.52, 5.82],   #Top of the aircraft
-            [0, -1.37, 0]      #Bottom of the aircraft
+            [0, 1.0, -6.7],   #Nose of the aircraft
+            [0, -0.5, 9.3],   #Tail of the aircraft
+            [6.7, 1, 0],    #Right wing tip
+            [-6.7, 1, 0],   #Left wing tip
+            [0, 2.7, 9.3],   #Top of the aircraft
+            [0, -1.8, -3.5]      #Bottom of the aircraft
         ])
+        cruise_speed =  155.0 # 155 kn (178 mph, 287 km/h)
+        done
     
-    return points
+    return points, cruise_speed
 
 def generate_bounding_box_GC(nose, tail, right, left, top, bottom):
     # 将所有点放入一个数组
@@ -261,13 +274,24 @@ def generate_bounding_box_GC(nose, tail, right, left, top, bottom):
     print("vertices:\n", vertices)
     return vertices
 
+def get_acf_icao(client):
+    icao_code_acf_list = []
+    icao_types = client.getDREF("sim/cockpit2/tcas/targets/icao_type")
+    # print("TCAS ICAO Types:", icao_types)
+    icao_codes = [icao_types[i:i+8] for i in range(0, len(icao_types), 8)]
+    for i, code in enumerate(icao_codes):
+        icao_code = ''.join([chr(int(x)) for x in code if x != 0])
+        # print(f"Aircraft {i} ICAO code: {icao_code}")
+        icao_code_acf_list.append(icao_code)
+
+    return icao_code_acf_list
 
 def get_bb_coords_by_icao(client, i, screen_h, screen_w):
 
-    aircraft_icao_data = client.getDREF("sim/aircraft/view/acf_ICAO")
-    byte_data = bytes(int(x) for x in aircraft_icao_data if x != 0)
-    icao_code = byte_data.decode('ascii')
-    print("ICAO code:", icao_code)
+    # aircraft_icao_data = client.getDREF("sim/aircraft/view/acf_ICAO")
+    # byte_data = bytes(int(x) for x in aircraft_icao_data if x != 0)
+    # icao_code = byte_data.decode('ascii')
+    # print("ICAO code:", icao_code)
 
     # retrieve x,y,z position of intruder
     acf_wrl = np.array([
@@ -281,7 +305,9 @@ def get_bb_coords_by_icao(client, i, screen_h, screen_w):
     R = get_rotation_matrix(*get_acf_poes_in_euler(i))
     cg_world = acf_wrl[:3]
     # points = get_the_ponits(icao_code)
-    points = get_the_geometry_ponits("BE58")
+    icao_code_acf_list = get_acf_icao(client)
+    print("ICAO code:", icao_code_acf_list[i])
+    points,_ = get_the_geometry_ponits(icao_code_acf_list[i])
     nose = points[0]
     tail = points[1]
     right = points[2]
@@ -359,6 +385,7 @@ def Draw_Convex_Hull_bounding_box_for_six_points(screenshot, points_list):
     cv2.polylines(screenshot, [hull], isClosed=True, color=(0, 255, 0), thickness=1)
     x, y, w, h = cv2.boundingRect(hull)
     cv2.rectangle(screenshot, (x, y), (x + w, y + h), (255, 0, 0), 1)
+
     # Oriented Bounding Boxes Object https://docs.opencv.org/4.x/dd/d49/tutorial_py_contour_features.html
     OBB = cv2.minAreaRect(hull)
     obb_box = cv2.boxPoints(OBB)
@@ -375,10 +402,10 @@ def run_data_generation(client):
     # Set starting position of ownship and intruder
     set_position(client, Aircraft(0, 0, 0, 0, heading=0, pitch=0, roll=0), ref)
     # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    set_position(client, Aircraft(1, 0, 6000, 0, heading=90, pitch=0, roll=0, gear=0), ref)
+    set_position(client, Aircraft(1, 0, 6400, 0, heading=0, pitch=90, roll=-45, gear=1), ref)
     # client.sendDREFs([dome_offset_heading, dome_offset_pitch], [0, 0])
     client.sendVIEW(85)
-    # time.sleep(0.5)
+    time.sleep(0.03)
     if platform.system() == "Windows":
         hwnd, abs_x, abs_y, width, height = wcw.get_xplane_window_info(window_title)
         screenshot = wcw.capture_xplane_window(hwnd, abs_x, abs_y, width, height)
@@ -408,7 +435,7 @@ def run_data_generation(client):
         cv2.circle(screenshot, (int(point[0]), int(point[1])), 3, color_list_points[i], 1)
         cv2.putText(screenshot, name_list_points[i], (int(point[0]), int(point[1])), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color_list_points[i], 1)
     
-    Draw_bounding_cube_for_eigth_corners_vertices(screenshot, vertices_list)
+    # Draw_bounding_cube_for_eigth_corners_vertices(screenshot, vertices_list)
     Draw_Convex_Hull_bounding_box_for_six_points(screenshot, points_list)
     Draw_a_cross_at_the_center_of_the_image(screenshot)
 
@@ -426,7 +453,7 @@ def run_data_generation(client):
 
 with xpc.XPlaneConnect() as client:
     client.pauseSim(False)
-    time.sleep(0.5)
+    # time.sleep(0.5)
     client.pauseSim(True)
     client.sendDREF("sim/operation/override/override_joystick", 1)
     run_data_generation(client)
