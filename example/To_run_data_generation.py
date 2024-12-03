@@ -185,6 +185,7 @@ def get_the_geometry_ponits(icao_code):
             [0, -1.37, 0]      #Bottom of the aircraft
         ])
         cruise_speed = 122.0 # 122 kn (140 mph, 226 km/h)
+        ADG_group = 1 # Airplane Design Group
          # done
 
     elif icao_code == "BE58": # Beechcraft Baron 58 https://en.wikipedia.org/wiki/Beechcraft_Baron
@@ -197,6 +198,7 @@ def get_the_geometry_ponits(icao_code):
             [0, -1.2, 0]      #Bottom of the aircraft
         ])
         cruise_speed = 180.0 # 180 kn (210 mph, 330 km/h)
+        ADG_group = 1 # Airplane Design Group
         # done
 
     elif icao_code == "BE9L": # Beechcraft King Air C90 https://en.wikipedia.org/wiki/Beechcraft_King_Air
@@ -209,6 +211,7 @@ def get_the_geometry_ponits(icao_code):
             [0, -1.0, -1.5]      #Bottom of the aircraft
         ]) # done
         cruise_speed = 226.0 # 226 kn (260 mph, 426 km/h)
+        ADG_group = 2 # Airplane Design Group
          # done
 
     elif icao_code == "B738": # Boeing 737-800 https://en.wikipedia.org/wiki/Boeing_737
@@ -221,6 +224,7 @@ def get_the_geometry_ponits(icao_code):
             [0, -2.85, -0]      #Bottom of the aircraft
         ])
         cruise_speed = 453.0 # Mach 0.785 (453 kn; 838 km/h; 521 mph)
+        ADG_group = 3 # Airplane Design Group
 
     elif icao_code == "SF50": # Cirrus Vision SF50 https://en.wikipedia.org/wiki/Cirrus_Vision_SF50
         points = np.array([
@@ -232,6 +236,7 @@ def get_the_geometry_ponits(icao_code):
             [0, -1.5, 0]      #Bottom of the aircraft
         ])
         cruise_speed = 305.0 # 305 kn (351 mph, 565 km/h)
+        ADG_group = 1 # Airplane Design Group
         # done
 
     elif icao_code == "S76": # Sikorsky S-76C https://en.wikipedia.org/wiki/Sikorsky_S-76
@@ -244,9 +249,10 @@ def get_the_geometry_ponits(icao_code):
             [0, -1.8, -3.5]      #Bottom of the aircraft
         ])
         cruise_speed =  155.0 # 155 kn (178 mph, 287 km/h)
+        ADG_group = 1 # Airplane Design Group
         done
     
-    return points, cruise_speed
+    return points, cruise_speed, ADG_group
 
 def generate_bounding_box_GC(nose, tail, right, left, top, bottom):
     # 将所有点放入一个数组
@@ -306,6 +312,7 @@ def get_bb_coords_by_icao(client, i, screen_h, screen_w):
     cg_world = acf_wrl[:3]
     # points = get_the_ponits(icao_code)
     icao_code_acf_list = get_acf_icao(client)
+    print("ICAO code list:", icao_code_acf_list)
     print("ICAO code:", icao_code_acf_list[i])
     points,_ = get_the_geometry_ponits(icao_code_acf_list[i])
     nose = points[0]
