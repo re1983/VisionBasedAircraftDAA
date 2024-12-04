@@ -186,7 +186,7 @@ def get_the_geometry_ponits(icao_code):
         ])
         cruise_speed = 122.0 # 122 kn (140 mph, 226 km/h)
         ADG_group = 1 # Airplane Design Group
-         # done
+        # done
 
     elif icao_code == "BE58": # Beechcraft Baron 58 https://en.wikipedia.org/wiki/Beechcraft_Baron
         points = np.array([
@@ -212,7 +212,7 @@ def get_the_geometry_ponits(icao_code):
         ]) # done
         cruise_speed = 226.0 # 226 kn (260 mph, 426 km/h)
         ADG_group = 2 # Airplane Design Group
-         # done
+        # done
 
     elif icao_code == "B738": # Boeing 737-800 https://en.wikipedia.org/wiki/Boeing_737
         points = np.array([
@@ -457,7 +457,52 @@ def run_data_generation(client):
         world_coords = pixel_to_world(clicked_coords, screenshot.shape[1], screenshot.shape[0])
         print(f"World coordinates: {world_coords}")
 
+
+def generate_positions(start_point, heading, fps, duration,velocity_kn):
+    """Generate a list of positions based on starting point, heading, fps, and velocity in knots."""
+    positions = []
+    velocity_mps = velocity_kn * 0.5144444444  # Convert knots to meters per second
+    time_step = 1 / fps  # Time step in seconds
+
+    current_position = np.array(start_point)
+    heading_rad = np.radians(heading)
+
+    for _ in range(duration*fps):
+        delta_x = velocity_mps * time_step * np.cos(heading_rad)
+        delta_y = velocity_mps * time_step * np.sin(heading_rad)
+        current_position += np.array([delta_x, delta_y])
+        positions.append(current_position.copy())
+
+    return positions
+
+
+import matplotlib.pyplot as plt
 import random_path_gen as rpg
+
+def plot_positions(positions):
+    """Plot a list of positions on a 2D plane."""
+    x_coords = [pos[0] for pos in positions]
+    y_coords = [pos[1] for pos in positions]
+
+    plt.figure(figsize=(10, 6))
+    plt.plot(x_coords, y_coords, marker='o', linestyle='-', color='b')
+    plt.xlabel('X Position')
+    plt.ylabel('Y Position')
+    plt.title('Aircraft Positions')
+    plt.grid(True)
+    plt.show()
+
+# FOV = 60
+# near1, far1 = 50, 1000
+# near2, far2 = 50, 1000 
+# offset1 = (0, 0)
+# offset2 = (0, 550)
+# heading, point1, point2 = rpg.get_random_points_between_two_trapezoids(FOV, near1, far1, near2, far2, offset1, offset2)
+# print(f"heading: {heading}, point1: {point1}, point2: {point2}")
+# positions_list = generate_positions(point1, heading, 30, 10, 155)
+# print(f"Number of positions: {len(positions_list)}")
+# plot_positions(positions_list)
+
 def run_data_generation_sequentially(client):
     """Begin data generation by calling gen_data"""
     FOV = 60
@@ -489,10 +534,11 @@ def run_data_generation_sequentially(client):
 
 
 
-with xpc.XPlaneConnect() as client:
-    client.pauseSim(False)
-    # time.sleep(0.5)
-    client.pauseSim(True)
-    client.sendDREF("sim/operation/override/override_joystick", 1)
-    # run_data_generation(client)
-    run_data_generation_sequentially(client)
+
+# with xpc.XPlaneConnect() as client:
+#     client.pauseSim(False)
+#     # time.sleep(0.5)
+#     client.pauseSim(True)
+#     client.sendDREF("sim/operation/override/override_joystick", 1)
+#     # run_data_generation(client)
+#     run_data_generation_sequentially(client)

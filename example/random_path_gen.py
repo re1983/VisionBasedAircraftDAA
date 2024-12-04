@@ -73,16 +73,10 @@ def get_random_points_between_two_trapezoids(FOV, near1, far1, near2, far2, offs
     return heading, point1, point2
 
 
-def plot_two_trapezoids_with_random_points(FOV, near1, far1, near2, far2, offset1, offset2):
-    # 生成隨機點
-    point1, point2 = generate_random_points_between_two_trapezoids(FOV, near1, far1, near2, far2, offset1, offset2)
-
-    # 繪製兩個梯形
-    trapezoid1 = generate_trapezoid_vertices(FOV, near1, far1, *offset1)
-    trapezoid2 = generate_trapezoid_vertices(FOV, near2, far2, *offset2)
+def plot_two_trapezoids_with_random_points(point1, point2, trapezoid1, trapezoid2):
 
     heading = calculate_heading(point1, point2)
-    return heading, point1, point2
+    # return heading, point1, point2
 
     print(f"Point1: {point1}")
     print(f"Point2: {point2}")
@@ -124,23 +118,10 @@ def plot_two_trapezoids_with_random_points(FOV, near1, far1, near2, far2, offset
     plt.show()
 
 
-# # 測試參數
 # FOV = 60
 # near1, far1 = 50, 1600
 # near2, far2 = 50, 1600 
 # offset1 = (0, 0)  # 梯形1位置
 # offset2 = (0, 550)  # 梯形2位置
 
-# # 繪製結果
-# plot_two_trapezoids_with_random_points(FOV, near1, far1, near2, far2, offset1, offset2)
-
-
-# 測試參數
-# FOV = 60
-# near1, far1 = 50, 1600
-# near2, far2 = 50, 1600 
-# offset1 = (0, 0)  # 梯形1位置
-# offset2 = (0, 550)  # 梯形2位置
-
-# # 繪製結果
 # plot_two_trapezoids_with_random_points(FOV, near1, far1, near2, far2, offset1, offset2)
