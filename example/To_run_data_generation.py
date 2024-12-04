@@ -250,7 +250,7 @@ def get_the_geometry_ponits(icao_code):
         ])
         cruise_speed =  155.0 # 155 kn (178 mph, 287 km/h)
         ADG_group = 1 # Airplane Design Group
-        done
+        # done
     
     return points, cruise_speed, ADG_group
 
@@ -314,7 +314,7 @@ def get_bb_coords_by_icao(client, i, screen_h, screen_w):
     icao_code_acf_list = get_acf_icao(client)
     print("ICAO code list:", icao_code_acf_list)
     print("ICAO code:", icao_code_acf_list[i])
-    points,_ = get_the_geometry_ponits(icao_code_acf_list[i])
+    points, cruise_speed, ADG_group = get_the_geometry_ponits(icao_code_acf_list[i])
     nose = points[0]
     tail = points[1]
     right = points[2]
@@ -409,7 +409,7 @@ def run_data_generation(client):
     # Set starting position of ownship and intruder
     set_position(client, Aircraft(0, 0, 0, 0, heading=0, pitch=0, roll=0), ref)
     # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    set_position(client, Aircraft(1, 0, 6400, 0, heading=0, pitch=90, roll=-45, gear=1), ref)
+    set_position(client, Aircraft(1, 0, 1000, 0, heading=0, pitch=0, roll=0, gear=0), ref)
     # client.sendDREFs([dome_offset_heading, dome_offset_pitch], [0, 0])
     client.sendVIEW(85)
     time.sleep(0.03)
@@ -457,10 +457,42 @@ def run_data_generation(client):
         world_coords = pixel_to_world(clicked_coords, screenshot.shape[1], screenshot.shape[0])
         print(f"World coordinates: {world_coords}")
 
+import random_path_gen as rpg
+def run_data_generation_sequentially(client):
+    """Begin data generation by calling gen_data"""
+    FOV = 60
+    near1, far1 = 50, 1000
+    near2, far2 = 50, 1000 
+    offset1 = (0, 0)
+    offset2 = (0, 550)
+    # Set starting position of ownship and intruder
+    set_position(client, Aircraft(0, 0, 0, 0, heading=0, pitch=0, roll=0), ref)
+    heading, point1, point2 = rpg.get_random_points_between_two_trapezoids(FOV, near1, far1, near2, far2, offset1, offset2)
+    print(f"heading: {heading}, point1: {point1}, point2: {point2}")
+    # set_position(client, Aircraft(1, point1[0], point1[1], 0, heading=heading, pitch=0, roll=0, gear=0), ref)
+
+    # heading, point1, point2 = rpg.get_random_points_between_two_trapezoids(FOV, near1, far1, near2, far2, offset1, offset2)
+    # print(f"heading: {heading}, point1: {point1}, point2: {point2}")
+    # set_position(client, Aircraft(2, point1[0], point1[1], 0, heading=0, pitch=0, roll=0, gear=0), ref)
+
+    # heading, point1, point2 = rpg.get_random_points_between_two_trapezoids(FOV, near1, far1, near2, far2, offset1, offset2)
+    # print(f"heading: {heading}, point1: {point1}, point2: {point2}")
+    # set_position(client, Aircraft(3, point1[0], point1[1], 0, heading=0, pitch=0, roll=0, gear=0), ref)
+
+    # heading, point1, point2 = rpg.get_random_points_between_two_trapezoids(FOV, near1, far1, near2, far2, offset1, offset2)
+    # print(f"heading: {heading}, point1: {point1}, point2: {point2}")
+    # set_position(client, Aircraft(4, point1[0], point1[1], 0, heading=0, pitch=0, roll=0, gear=0), ref)
+
+    # heading, point1, point2 = rpg.get_random_points_between_two_trapezoids(FOV, near1, far1, near2, far2, offset1, offset2)
+    # print(f"heading: {heading}, point1: {point1}, point2: {point2}")
+    # set_position(client, Aircraft(5, point1[0], point1[1], 0, heading=0, pitch=0, roll=0, gear=0), ref)
+
+
 
 with xpc.XPlaneConnect() as client:
     client.pauseSim(False)
     # time.sleep(0.5)
     client.pauseSim(True)
     client.sendDREF("sim/operation/override/override_joystick", 1)
-    run_data_generation(client)
+    # run_data_generation(client)
+    run_data_generation_sequentially(client)

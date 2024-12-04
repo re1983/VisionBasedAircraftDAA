@@ -42,12 +42,12 @@ def generate_random_points_between_two_trapezoids(FOV, near1, far1, near2, far2,
     random_edge1_index = np.random.choice(len(edges1))
     while random_edge1_index == 0:
         random_edge1_index = np.random.choice(len(edges1))
-    print(random_edge1_index)
+    # print(random_edge1_index)
     edge1 = edges1[random_edge1_index]
     random_edge2_index = np.random.choice(len(edges2))
     while random_edge2_index == random_edge1_index:
         random_edge2_index = np.random.choice(len(edges2))
-    print(random_edge2_index)
+    # print(random_edge2_index)
     edge2 = edges2[random_edge2_index]
 
     point1 = generate_random_point_on_edge(*edge1)
@@ -59,6 +59,20 @@ def generate_random_points_between_two_trapezoids(FOV, near1, far1, near2, far2,
 
 import matplotlib.pyplot as plt
 
+def calculate_heading(point1, point2):
+    delta_x = point2[0] - point1[0]
+    delta_y = point2[1] - point1[1]
+    heading_rad = np.arctan2(delta_y, delta_x)
+    heading_deg = np.degrees(heading_rad)
+    heading_deg = (90 - heading_deg) % 360  # 以北為0度
+    return heading_deg
+
+def get_random_points_between_two_trapezoids(FOV, near1, far1, near2, far2, offset1, offset2):
+    point1, point2 = generate_random_points_between_two_trapezoids(FOV, near1, far1, near2, far2, offset1, offset2)
+    heading = calculate_heading(point1, point2)
+    return heading, point1, point2
+
+
 def plot_two_trapezoids_with_random_points(FOV, near1, far1, near2, far2, offset1, offset2):
     # 生成隨機點
     point1, point2 = generate_random_points_between_two_trapezoids(FOV, near1, far1, near2, far2, offset1, offset2)
@@ -67,6 +81,14 @@ def plot_two_trapezoids_with_random_points(FOV, near1, far1, near2, far2, offset
     trapezoid1 = generate_trapezoid_vertices(FOV, near1, far1, *offset1)
     trapezoid2 = generate_trapezoid_vertices(FOV, near2, far2, *offset2)
 
+    heading = calculate_heading(point1, point2)
+    return heading, point1, point2
+
+    print(f"Point1: {point1}")
+    print(f"Point2: {point2}")
+    print(f"Heading from point1 to point2: {heading:.2f} degrees")
+
+    
     # 梯形1
     plt.plot(
         [trapezoid1[0][0], trapezoid1[1][0], trapezoid1[3][0], trapezoid1[2][0], trapezoid1[0][0]],
@@ -85,6 +107,14 @@ def plot_two_trapezoids_with_random_points(FOV, near1, far1, near2, far2, offset
     plt.scatter([point1[0], point2[0]], [point1[1], point2[1]], c='red', label="Random Points")
     plt.plot([point1[0], point2[0]], [point1[1], point2[1]], 'r--', label="Random Path")
 
+    # 標注座標值
+    plt.text(point1[0], point1[1], f"({point1[0]:.2f}, {point1[1]:.2f})", fontsize=12, ha='right')
+    plt.text(point2[0], point2[1], f"({point2[0]:.2f}, {point2[1]:.2f})", fontsize=12, ha='right')
+
+    # 標注點一或點二
+    plt.annotate('Point 1', (point1[0], point1[1]), textcoords="offset points", xytext=(-10,-10), ha='center', fontsize=12, color='blue')
+    plt.annotate('Point 2', (point2[0], point2[1]), textcoords="offset points", xytext=(-10,-10), ha='center', fontsize=12, color='blue')
+
     # 設置
     plt.legend()
     plt.xlabel("X")
@@ -93,12 +123,24 @@ def plot_two_trapezoids_with_random_points(FOV, near1, far1, near2, far2, offset
     plt.title("Random Points Between Two Trapezoids")
     plt.show()
 
-# 測試參數
-FOV = 60
-near1, far1 = 50, 6000
-near2, far2 = 50, 6000 
-offset1 = (0, 0)  # 梯形1位置
-offset2 = (0, 550)  # 梯形2位置
 
-# 繪製結果
-plot_two_trapezoids_with_random_points(FOV, near1, far1, near2, far2, offset1, offset2)
+# # 測試參數
+# FOV = 60
+# near1, far1 = 50, 1600
+# near2, far2 = 50, 1600 
+# offset1 = (0, 0)  # 梯形1位置
+# offset2 = (0, 550)  # 梯形2位置
+
+# # 繪製結果
+# plot_two_trapezoids_with_random_points(FOV, near1, far1, near2, far2, offset1, offset2)
+
+
+# 測試參數
+# FOV = 60
+# near1, far1 = 50, 1600
+# near2, far2 = 50, 1600 
+# offset1 = (0, 0)  # 梯形1位置
+# offset2 = (0, 550)  # 梯形2位置
+
+# # 繪製結果
+# plot_two_trapezoids_with_random_points(FOV, near1, far1, near2, far2, offset1, offset2)
