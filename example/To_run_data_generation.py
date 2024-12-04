@@ -31,14 +31,14 @@ dome_offset_heading = "sim/graphics/view/dome_offset_heading"
 dome_offset_pitch = "sim/graphics/view/dome_offset_pitch"
 # ref = [40.669332, -74.012405, 1000.0] #new york
 # ref = [24.979755, 121.451006, 500.0] #taiwan
-ref = [40.0, -111.658833, 5000.0] #provo
+ref = [40.0, -111.658833, 3500.0] #provo
 # ref = [-22.943736, -43.177820, 500.0] #rio
 # ref = [38.870277, -77.030046, 500.0] #washington dc
 name_list_points = ["Nose", "Tail", "Right", "Left", "Top", "Bottom"]
 color_list_points = [(0, 0, 255), (0, 255, 0), (255, 0, 0), (255, 255, 0), (0, 255, 255), (255, 0, 255)]
 class Aircraft:
     """Object for storing positional information for Aircraft"""
-    def __init__(self, ac_num, east, north, up, heading, pitch=-998, roll=-998, gear=-998):
+    def __init__(self, ac_num, east, north, up, heading=-998, pitch=-998, roll=-998, gear=-998):
         self.id = ac_num
         self.e = east
         self.n = north
@@ -65,7 +65,7 @@ def get_bb_coords(client, i, screen_h, screen_w):
         client.getDREF((f'sim/multiplayer/position/plane{i}_z'))[0],
         1.0
     ])
-    print("acf_wrl:", acf_wrl)
+    # print("acf_wrl:", acf_wrl)
 
     mv = client.getDREF("sim/graphics/view/world_matrix")
     proj = client.getDREF("sim/graphics/view/projection_matrix_3d")
@@ -280,7 +280,7 @@ def generate_bounding_box_GC(nose, tail, right, left, top, bottom):
     print("vertices:\n", vertices)
     return vertices
 
-def get_acf_icao(client):
+def get_list_acfs_icao(client):
     icao_code_acf_list = []
     icao_types = client.getDREF("sim/cockpit2/tcas/targets/icao_type")
     # print("TCAS ICAO Types:", icao_types)
@@ -288,7 +288,8 @@ def get_acf_icao(client):
     for i, code in enumerate(icao_codes):
         icao_code = ''.join([chr(int(x)) for x in code if x != 0])
         # print(f"Aircraft {i} ICAO code: {icao_code}")
-        icao_code_acf_list.append(icao_code)
+        if icao_code != '':
+            icao_code_acf_list.append(icao_code)
 
     return icao_code_acf_list
 
@@ -458,13 +459,14 @@ def run_data_generation(client):
         print(f"World coordinates: {world_coords}")
 
 
-def generate_positions(start_point, heading, fps, duration,velocity_kn):
+def generate_positions_by_timestep(start_point, heading, fps, duration,velocity_kn):
     """Generate a list of positions based on starting point, heading, fps, and velocity in knots."""
     positions = []
     velocity_mps = velocity_kn * 0.5144444444  # Convert knots to meters per second
     time_step = 1 / fps  # Time step in seconds
 
     current_position = np.array(start_point)
+    heading = (90 - heading) % 360
     heading_rad = np.radians(heading)
 
     for _ in range(duration*fps):
@@ -503,17 +505,165 @@ def plot_positions(positions):
 # print(f"Number of positions: {len(positions_list)}")
 # plot_positions(positions_list)
 
+def get_bb_coords_acfs(client, Number_of_aircrafts, proj_mat, screen_h, screen_w):
+    bb_coords = []
+    mv = client.getDREF("sim/graphics/view/world_matrix")
+    # proj = client.getDREF("sim/graphics/view/projection_matrix_3d")
+    # retrieve x,y,z position of intruder
+    for i in range(Number_of_aircrafts):
+        if i == 0:
+            continue
+        else:
+            acf_wrl = np.array([
+                client.getDREF((f'sim/multiplayer/position/plane{i}_x'))[0],
+                client.getDREF((f'sim/multiplayer/position/plane{i}_y'))[0],
+                client.getDREF((f'sim/multiplayer/position/plane{i}_z'))[0],
+                1.0
+            ])
+
+            acf_eye = mult_matrix_vec(mv, acf_wrl)
+            acf_ndc = mult_matrix_vec(proj_mat, acf_eye)
+        
+            acf_ndc[3] = 1.0 / acf_ndc[3]
+            acf_ndc[0] *= acf_ndc[3]
+            acf_ndc[1] *= acf_ndc[3]
+            acf_ndc[2] *= acf_ndc[3]
+
+            final_x = screen_w * (acf_ndc[0] * 0.5 + 0.5)
+            final_y = screen_h * (acf_ndc[1] * 0.5 + 0.5)
+            bb_coords.append((final_x, screen_h - final_y))
+
+    return bb_coords
+
+
 def run_data_generation_sequentially(client):
+    all_positions_in_path = []
+    fps = 30
+    duration = 10
+
+    client.sendVIEW(85)
+    if platform.system() == "Windows":
+        hwnd, abs_x, abs_y, width, height = wcw.get_xplane_window_info(window_title)
+        screenshot = wcw.capture_xplane_window(hwnd, abs_x, abs_y, width, height)
+    else:
+        xwininfo_output = subprocess.check_output(['xwininfo', '-name', 'X-System']).decode('utf-8')
+        hwnd, abs_x, abs_y = so.get_xplane_window_info(xwininfo_output)
+        screenshot = so.capture_xplane_window(hwnd, abs_x, abs_y)
+
+    print(f"Screenshot shape: {screenshot.shape[1], screenshot.shape[0]}")
+    print(f"Reference coordinates: {ref}")
+   
+    mv = client.getDREF("sim/graphics/view/world_matrix")
+    proj = client.getDREF("sim/graphics/view/projection_matrix_3d")
+    projection_matrix_3d = np.reshape(proj, (4, 4)).T
+    
+    fx, fy, cx, cy = projection_matrix_to_intrinsics(projection_matrix_3d, screenshot.shape[1], screenshot.shape[0])
+    print(f"fx, fy, cx, cy: {fx, fy, cx, cy}")
+
     """Begin data generation by calling gen_data"""
-    FOV = 60
-    near1, far1 = 50, 1000
-    near2, far2 = 50, 1000 
-    offset1 = (0, 0)
-    offset2 = (0, 550)
+    X_FOV = client.getDREF("sim/graphics/view/field_of_view_deg")[0]
+    print(f"Field of View: {X_FOV}")
+    near1, far1 = 50, 1600
+    near2, far2 = 50, 1600 
+
+    icao_code_acf_list = get_list_acfs_icao(client)
+    print("ICAO code list:", icao_code_acf_list)
+    print("Number of aircrafts:", len(icao_code_acf_list))
     # Set starting position of ownship and intruder
-    set_position(client, Aircraft(0, 0, 0, 0, heading=0, pitch=0, roll=0), ref)
-    heading, point1, point2 = rpg.get_random_points_between_two_trapezoids(FOV, near1, far1, near2, far2, offset1, offset2)
-    print(f"heading: {heading}, point1: {point1}, point2: {point2}")
+    for i, icao_code in enumerate(icao_code_acf_list):
+
+        if i == 0:
+            set_position(client, Aircraft(i, 0, 0, 0, heading=0, pitch=0, roll=0), ref) # ownship
+            points, cruise_speed, ADG_group = get_the_geometry_ponits(icao_code)
+            path = generate_positions_by_timestep([0.0,0.0], 0, fps, duration, cruise_speed)
+            # print(path)
+            all_positions_in_path.append(path)
+            offset1 = path[0]
+            # print(f"offset1: {offset1}")
+            offset2 = path[-1]
+            # print(f"offset2: {offset2}")
+        else:
+            client.sendDREF(f"sim/multiplayer/position/plane{i}_throttle", 0.0)
+            points, cruise_speed, ADG_group = get_the_geometry_ponits(icao_code)
+            heading, point1, point2 = rpg.get_random_points_between_two_trapezoids(X_FOV, near1, far1, near2, far2, offset1, offset2)
+            # print(f"heading: {heading}, point1: {point1}, point2: {point2}")
+            set_position(client, Aircraft(i, point1[0], point1[1], -30, heading=heading, pitch=0, roll=0), ref)
+            path = generate_positions_by_timestep(point1, heading, fps, duration, cruise_speed)
+            all_positions_in_path.append(path)
+
+    time.sleep(3)
+    # np.save('all_positions_in_path.npy', all_positions_in_path)
+
+
+    for t in range(len(all_positions_in_path[0])):
+
+        # print(f"Time step: {t}")
+        # time.sleep(1/fps*2)
+
+        for j, positions in enumerate(all_positions_in_path):
+            # print(f"Setting position for aircraft {j} at {positions[t]}")
+            if j == 0:
+                set_position(client, Aircraft(j, positions[t][0], positions[t][1], 0, heading=-998, pitch=-998, roll=-998), ref)
+            else:
+                set_position(client, Aircraft(j, positions[t][0], positions[t][1], -30, heading=-998, pitch=-998, roll=-998), ref)
+
+        time.sleep(1/fps)
+
+        if hwnd:
+            if platform.system() == "Windows":
+                screenshot = wcw.capture_xplane_window(hwnd, abs_x, abs_y, width, height)
+            else:
+                screenshot = so.capture_xplane_window(hwnd, abs_x, abs_y)  
+
+        bbc_list = get_bb_coords_acfs(client, len(icao_code_acf_list), proj, screenshot.shape[0], screenshot.shape[1])
+        screenshot = screenshot.copy()
+        for i, bbc in enumerate(bbc_list):
+            cv2.circle(screenshot, (int(bbc[0]), int(bbc[1])), 1, (0, 0, 255), -1)
+        
+        cv2.imshow('X-Plane Screenshot', screenshot)
+        # screenshot = screenshot.copy()
+
+        if cv2.waitKey(1) & 0xFF == 27:
+            break
+    
+
+    cv2.destroyAllWindows()
+    # for path in all_positions_in_path[0]:
+    # for t in range(len(all_positions_in_path[0])):
+    #     for j, pos in enumerate(positions):
+    #         print(f"Setting position for aircraft {j} at {pos}")
+
+    # for i, positions in enumerate(all_positions_in_path):
+    #     print(f"Setting position for aircraft {i} at {path}")
+        # set_position(client, Aircraft(i, positions[0], positions[1], -998, heading=-998, pitch=-998, roll=-998), ref)
+
+        # nose = points[0]
+        # tail = points[1]
+        # right = points[2]
+        # left = points[3]
+        # top = points[4]
+        # bottom = points[5]
+        # vertices = generate_bounding_box_GC(nose, tail, right, left, top, bottom)
+        # print(f"ICAO code: {icao_code}")
+        # print(f"points: {points}")
+        # print(f"vertices: {vertices}")
+        # set_position(client, Aircraft(i, 0, 0, 0, heading=0, pitch=0, roll=0), ref)
+        # time.sleep(0.1)
+        # set_position(client, Aircraft(i+1, 0, 1000, 0, heading=0, pitch=0, roll=0, gear=0), ref)
+        # time.sleep(0.1)
+        # list_points_xy, list_vertices_xy = get_bb_coords_by_icao(client, i+1, 1080, 1920)
+        # print(f"list_points_xy: {list_points_xy}")
+        # print(f"list_vertices_xy: {list_vertices_xy}")
+        # screenshot = np.zeros((1080, 1920, 3), dtype=np.uint8)
+        # Draw_Convex_Hull_bounding_box_for_six_points(screenshot, list_points_xy)
+        # Draw_bounding_cube_for_eigth_corners_vertices(screenshot, list_vertices_xy)
+        # Draw_a_cross_at_the_center_of_the_image(screenshot)
+        # cv2.imshow('X-Plane Screenshot', screenshot)
+        # while True:
+        #     if cv2.waitKey(1) & 0xFF == 27:
+        #         break
+        # cv2.destroyAllWindows()
+
     # set_position(client, Aircraft(1, point1[0], point1[1], 0, heading=heading, pitch=0, roll=0, gear=0), ref)
 
     # heading, point1, point2 = rpg.get_random_points_between_two_trapezoids(FOV, near1, far1, near2, far2, offset1, offset2)
@@ -535,10 +685,10 @@ def run_data_generation_sequentially(client):
 
 
 
-# with xpc.XPlaneConnect() as client:
-#     client.pauseSim(False)
-#     # time.sleep(0.5)
-#     client.pauseSim(True)
-#     client.sendDREF("sim/operation/override/override_joystick", 1)
-#     # run_data_generation(client)
-#     run_data_generation_sequentially(client)
+with xpc.XPlaneConnect() as client:
+    client.pauseSim(False)
+    # time.sleep(0.5)
+    client.pauseSim(True)
+    client.sendDREF("sim/operation/override/override_joystick", 1)
+    # run_data_generation(client)
+    run_data_generation_sequentially(client)
