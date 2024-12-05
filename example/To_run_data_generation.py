@@ -505,9 +505,29 @@ def plot_positions(positions):
 # print(f"Number of positions: {len(positions_list)}")
 # plot_positions(positions_list)
 
-def get_bb_coords_acfs(client, Number_of_aircrafts, proj_mat, screen_h, screen_w):
+def points_to_bb(client, i, points, mv, proj, acf_wrl, screen_h, screen_w, screenshot):
+
+    R = get_rotation_matrix(*get_acf_poes_in_euler(i))
+    cg_world = acf_wrl[:3]
+    # nose = points[0]
+    # tail = points[1]
+    # right = points[2]
+    # left = points[3]
+    # top = points[4]
+    # bottom = points[5]
+    # vertices = generate_bounding_box_GC(nose, tail, right, left, top, bottom)
+    points_world = np.array([cg_world + R @ point for point in points])
+    list_points_xy = get_projections_xy(points_world, acf_wrl, mv, proj, screen_h, screen_w)
+    # vertices_world = np.array([cg_world + R @ point for point in vertices])
+    # list_vertices_xy = get_projections_xy(vertices_world, acf_wrl, mv, proj, screen_h, screen_w) 
+    Draw_Convex_Hull_bounding_box_for_six_points(screenshot, list_points_xy)
+    return list_points_xy
+
+
+def get_bb_coords_acfs(client, Number_of_aircrafts, proj_mat, screen_h, screen_w, screenshot):
     bb_coords = []
     mv = client.getDREF("sim/graphics/view/world_matrix")
+    icao_code_acf_list = get_list_acfs_icao(client)
     # proj = client.getDREF("sim/graphics/view/projection_matrix_3d")
     # retrieve x,y,z position of intruder
     for i in range(Number_of_aircrafts):
@@ -532,6 +552,9 @@ def get_bb_coords_acfs(client, Number_of_aircrafts, proj_mat, screen_h, screen_w
             final_x = screen_w * (acf_ndc[0] * 0.5 + 0.5)
             final_y = screen_h * (acf_ndc[1] * 0.5 + 0.5)
             bb_coords.append((final_x, screen_h - final_y))
+
+            points, cruise_speed, ADG_group = get_the_geometry_ponits(icao_code_acf_list[i])
+        points_to_bb(client, i, points, mv, proj_mat, acf_wrl, screen_h, screen_w, screenshot)
 
     return bb_coords
 
@@ -591,7 +614,7 @@ def run_data_generation_sequentially(client):
             path = generate_positions_by_timestep(point1, heading, fps, duration, cruise_speed)
             all_positions_in_path.append(path)
 
-    time.sleep(3)
+    time.sleep(0.5)
     # np.save('all_positions_in_path.npy', all_positions_in_path)
 
 
@@ -615,8 +638,9 @@ def run_data_generation_sequentially(client):
             else:
                 screenshot = so.capture_xplane_window(hwnd, abs_x, abs_y)  
 
-        bbc_list = get_bb_coords_acfs(client, len(icao_code_acf_list), proj, screenshot.shape[0], screenshot.shape[1])
         screenshot = screenshot.copy()
+        bbc_list = get_bb_coords_acfs(client, len(icao_code_acf_list), proj, screenshot.shape[0], screenshot.shape[1], screenshot)
+        
         for i, bbc in enumerate(bbc_list):
             cv2.circle(screenshot, (int(bbc[0]), int(bbc[1])), 1, (0, 0, 255), -1)
         
