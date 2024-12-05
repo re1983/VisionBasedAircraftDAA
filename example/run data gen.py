@@ -400,6 +400,8 @@ def Draw_Convex_Hull_bounding_box_for_six_points(screenshot, points_list):
     obb_box = np.int0(obb_box)
     cv2.drawContours(screenshot, [obb_box], 0, (0, 0, 255), 1)
 
+    return x, y, w, h
+
 def Draw_bounding_cube_for_eigth_corners_vertices(screenshot, vertices_list):
     for vertex in vertices_list:
         cv2.circle(screenshot, (int(vertex[0]), int(vertex[1])), 1, (0, 0, 255), -1)
@@ -494,38 +496,24 @@ def plot_positions(positions):
     plt.grid(True)
     plt.show()
 
-# FOV = 60
-# near1, far1 = 50, 1000
-# near2, far2 = 50, 1000 
-# offset1 = (0, 0)
-# offset2 = (0, 550)
-# heading, point1, point2 = rpg.get_random_points_between_two_trapezoids(FOV, near1, far1, near2, far2, offset1, offset2)
-# print(f"heading: {heading}, point1: {point1}, point2: {point2}")
-# positions_list = generate_positions(point1, heading, 30, 10, 155)
-# print(f"Number of positions: {len(positions_list)}")
-# plot_positions(positions_list)
 
 def points_to_bb(client, i, points, mv, proj, acf_wrl, screen_h, screen_w, screenshot):
 
     R = get_rotation_matrix(*get_acf_poes_in_euler(i))
     cg_world = acf_wrl[:3]
-    # nose = points[0]
-    # tail = points[1]
-    # right = points[2]
-    # left = points[3]
-    # top = points[4]
-    # bottom = points[5]
-    # vertices = generate_bounding_box_GC(nose, tail, right, left, top, bottom)
     points_world = np.array([cg_world + R @ point for point in points])
     list_points_xy = get_projections_xy(points_world, acf_wrl, mv, proj, screen_h, screen_w)
-    # vertices_world = np.array([cg_world + R @ point for point in vertices])
-    # list_vertices_xy = get_projections_xy(vertices_world, acf_wrl, mv, proj, screen_h, screen_w) 
-    Draw_Convex_Hull_bounding_box_for_six_points(screenshot, list_points_xy)
-    return list_points_xy
+    x, y, w, h = Draw_Convex_Hull_bounding_box_for_six_points(screenshot, list_points_xy)
+    
+    return list_points_xy, x, y, w, h 
 
 
 def get_bb_coords_acfs(client, Number_of_aircrafts, proj_mat, screen_h, screen_w, screenshot):
     bb_coords = []
+    x_list = []
+    y_list = []
+    w_list = []
+    h_list = [] 
     mv = client.getDREF("sim/graphics/view/world_matrix")
     icao_code_acf_list = get_list_acfs_icao(client)
     # proj = client.getDREF("sim/graphics/view/projection_matrix_3d")
@@ -554,13 +542,18 @@ def get_bb_coords_acfs(client, Number_of_aircrafts, proj_mat, screen_h, screen_w
             bb_coords.append((final_x, screen_h - final_y))
 
             points, cruise_speed, ADG_group = get_the_geometry_ponits(icao_code_acf_list[i])
-        points_to_bb(client, i, points, mv, proj_mat, acf_wrl, screen_h, screen_w, screenshot)
+            list_points_xy, x, y, w, h = points_to_bb(client, i, points, mv, proj_mat, acf_wrl, screen_h, screen_w, screenshot)
+            x_list.append(x)
+            y_list.append(y)
+            w_list.append(w)
+            h_list.append(h)
 
-    return bb_coords
+    return bb_coords, x_list, y_list, w_list, h_list
 
 
 def run_data_generation_sequentially(client):
     all_positions_in_path = []
+    aw = []
     fps = 30
     duration = 10
 
@@ -575,7 +568,11 @@ def run_data_generation_sequentially(client):
 
     print(f"Screenshot shape: {screenshot.shape[1], screenshot.shape[0]}")
     print(f"Reference coordinates: {ref}")
-   
+    
+    fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    out = cv2.VideoWriter(f'{timestamp}_output.mp4', fourcc, 30.0, (int(screenshot.shape[1]), int(screenshot.shape[0])))
+
     mv = client.getDREF("sim/graphics/view/world_matrix")
     proj = client.getDREF("sim/graphics/view/projection_matrix_3d")
     projection_matrix_3d = np.reshape(proj, (4, 4)).T
@@ -584,10 +581,15 @@ def run_data_generation_sequentially(client):
     print(f"fx, fy, cx, cy: {fx, fy, cx, cy}")
 
     """Begin data generation by calling gen_data"""
-    X_FOV = client.getDREF("sim/graphics/view/field_of_view_deg")[0] - 2
+    X_FOV = client.getDREF("sim/graphics/view/field_of_view_deg")[0]
     print(f"Field of View: {X_FOV}")
-    near1, far1 = 50, 1600
-    near2, far2 = 50, 1600 
+    X_FOV_rad = np.radians(X_FOV)
+    pixelAD_x = X_FOV_rad / screenshot.shape[1]
+
+    X_FOV = X_FOV - 1
+    print(f"Field of View: {X_FOV}")
+    near1, far1 = 50, 1000
+    near2, far2 = 50, 1000
 
     icao_code_acf_list = get_list_acfs_icao(client)
     print("ICAO code list:", icao_code_acf_list)
@@ -615,7 +617,7 @@ def run_data_generation_sequentially(client):
             all_positions_in_path.append(path)
 
     time.sleep(0.5)
-    # np.save('all_positions_in_path.npy', all_positions_in_path)
+   
 
 
     for t in range(len(all_positions_in_path[0])):
@@ -638,19 +640,33 @@ def run_data_generation_sequentially(client):
             else:
                 screenshot = so.capture_xplane_window(hwnd, abs_x, abs_y)  
 
+        ret = out.write(screenshot)
         screenshot = screenshot.copy()
-        bbc_list = get_bb_coords_acfs(client, len(icao_code_acf_list), proj, screenshot.shape[0], screenshot.shape[1], screenshot)
-        
+        bbc_list, x, y, w, h = get_bb_coords_acfs(client, len(icao_code_acf_list), proj, screenshot.shape[0], screenshot.shape[1], screenshot)
+
+        # Calculate bearing and bearing size
+
+        bearing_sizes = [float(width) * pixelAD_x for width in w]
+        bearing_angles = [(float(x) * pixelAD_x) - (X_FOV_rad/2)  for x in x]
+        bearing_info = list(zip(bearing_angles, bearing_sizes))
+        # print(f"Bearing Info: {bearing_info}")
+
+        aw.append(bearing_info)
         for i, bbc in enumerate(bbc_list):
             cv2.circle(screenshot, (int(bbc[0]), int(bbc[1])), 1, (0, 0, 255), -1)
         
-        cv2.imshow('X-Plane Screenshot', screenshot)
+        half_screenshot = cv2.resize(screenshot, (screenshot.shape[1] // 2, screenshot.shape[0] // 2))
+        cv2.imshow('X-Plane Screenshot', half_screenshot)
         # screenshot = screenshot.copy()
 
         if cv2.waitKey(1) & 0xFF == 27:
             break
-    
+    # print(f'aw len: {len(aw)}')
+    np.save(f'{timestamp}_all_positions_in_path.npy', all_positions_in_path)
+    np.save(f'{timestamp}_bearing_info.npy', aw)
 
+    
+    out.release()
     cv2.destroyAllWindows()
     # for path in all_positions_in_path[0]:
     # for t in range(len(all_positions_in_path[0])):
