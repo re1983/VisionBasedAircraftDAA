@@ -31,7 +31,7 @@ dome_offset_heading = "sim/graphics/view/dome_offset_heading"
 dome_offset_pitch = "sim/graphics/view/dome_offset_pitch"
 # ref = [40.669332, -74.012405, 1000.0] #new york
 # ref = [24.979755, 121.451006, 500.0] #taiwan
-ref = [40.0, -111.658833, 3500.0] #provo
+ref = [40.17, -111.658833, 3500.0] #provo
 # ref = [-22.943736, -43.177820, 500.0] #rio
 # ref = [38.870277, -77.030046, 500.0] #washington dc
 name_list_points = ["Nose", "Tail", "Right", "Left", "Top", "Bottom"]
@@ -612,7 +612,7 @@ def run_data_generation_sequentially(client):
             points, cruise_speed, ADG_group = get_the_geometry_ponits(icao_code)
             heading, point1, point2 = rpg.get_random_points_between_two_trapezoids(X_FOV, near1, far1, near2, far2, offset1, offset2)
             # print(f"heading: {heading}, point1: {point1}, point2: {point2}")
-            set_position(client, Aircraft(i, point1[0], point1[1], -30, heading=heading, pitch=0, roll=0), ref)
+            set_position(client, Aircraft(i, point1[0], point1[1], -30, heading=heading, pitch=0, roll=0, gear=0), ref)
             path = generate_positions_by_timestep(point1, heading, fps, duration, cruise_speed)
             all_positions_in_path.append(path)
 
@@ -640,7 +640,7 @@ def run_data_generation_sequentially(client):
             else:
                 screenshot = so.capture_xplane_window(hwnd, abs_x, abs_y)  
 
-        ret = out.write(screenshot)
+        # ret = out.write(screenshot)
         screenshot = screenshot.copy()
         bbc_list, x, y, w, h = get_bb_coords_acfs(client, len(icao_code_acf_list), proj, screenshot.shape[0], screenshot.shape[1], screenshot)
 
@@ -655,6 +655,7 @@ def run_data_generation_sequentially(client):
         for i, bbc in enumerate(bbc_list):
             cv2.circle(screenshot, (int(bbc[0]), int(bbc[1])), 1, (0, 0, 255), -1)
         
+        ret = out.write(screenshot)
         half_screenshot = cv2.resize(screenshot, (screenshot.shape[1] // 2, screenshot.shape[0] // 2))
         cv2.imshow('X-Plane Screenshot', half_screenshot)
         # screenshot = screenshot.copy()
@@ -662,8 +663,8 @@ def run_data_generation_sequentially(client):
         if cv2.waitKey(1) & 0xFF == 27:
             break
     # print(f'aw len: {len(aw)}')
-    np.save(f'{timestamp}_all_positions_in_path.npy', all_positions_in_path)
-    np.save(f'{timestamp}_bearing_info.npy', aw)
+    # np.save(f'{timestamp}_all_positions_in_path.npy', all_positions_in_path)
+    # np.save(f'{timestamp}_bearing_info.npy', aw)
 
     
     out.release()
