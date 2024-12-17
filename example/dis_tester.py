@@ -216,8 +216,8 @@ def get_the_geometry_ponits(icao_code):
 
     elif icao_code == "B738": # Boeing 737-800 https://en.wikipedia.org/wiki/Boeing_737
         points = np.array([
-            [0, 0.1, -18.5],   #Nose of the aircraft
-            [0, 0, 22],   #Tail of the aircraft
+            [0, 0.175, -18.4],   #Nose of the aircraft
+            [0, 0, 21.1],   #Tail of the aircraft
             [18, 3, 7],    #Right wing tip
             [-18, 3, 7],   #Left wing tip
             [0, 9.7, 21],   #Top of the aircraft
@@ -398,7 +398,7 @@ def Draw_Convex_Hull_bounding_box_for_six_points(screenshot, points_list):
     OBB = cv2.minAreaRect(hull)
     obb_box = cv2.boxPoints(OBB)
     obb_box = np.intp(obb_box)
-    cv2.drawContours(screenshot, [obb_box], 0, (0, 0, 255), 1)
+    # cv2.drawContours(screenshot, [obb_box], 0, (0, 0, 255), 1)
 
     return x, y, w, h
 
@@ -571,7 +571,7 @@ def run_data_generation_sequentially(client):
     
     fourcc = cv2.VideoWriter_fourcc(*'mp4v')
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    out = cv2.VideoWriter(f'{timestamp}_output.mp4', fourcc, 30.0, (int(screenshot.shape[1]), int(screenshot.shape[0])))
+    # out = cv2.VideoWriter(f'{timestamp}_output.mp4', fourcc, 30.0, (int(screenshot.shape[1]), int(screenshot.shape[0])))
 
     mv = client.getDREF("sim/graphics/view/world_matrix")
     proj = client.getDREF("sim/graphics/view/projection_matrix_3d")
@@ -583,12 +583,14 @@ def run_data_generation_sequentially(client):
     """Begin data generation by calling gen_data"""
     X_FOV = client.getDREF("sim/graphics/view/field_of_view_deg")[0]
     print(f"Field of View: {X_FOV}")
+    pixelAD_x_deg = X_FOV / screenshot.shape[1]
+    print(f"Pixel Angle Density in degrees: {pixelAD_x_deg}")
     X_FOV_rad = np.radians(X_FOV)
-    pixelAD_x = X_FOV_rad / screenshot.shape[1]
-
-    X_FOV = X_FOV - 1
+    pixelAD_x_radians = X_FOV_rad / screenshot.shape[1]
+    print(f"Pixel Angle Density in radians: {pixelAD_x_radians}")
+    # X_FOV = X_FOV - 1
     print(f"Field of View: {X_FOV}")
-    near1, far1 = 50, 1000
+    near1, far1 = 50, 100075
     near2, far2 = 50, 1000
 
     icao_code_acf_list = get_list_acfs_icao(client)
@@ -612,63 +614,78 @@ def run_data_generation_sequentially(client):
             points, cruise_speed, ADG_group = get_the_geometry_ponits(icao_code)
             heading, point1, point2 = rpg.get_random_points_between_two_trapezoids(X_FOV, near1, far1, near2, far2, offset1, offset2)
             # print(f"heading: {heading}, point1: {point1}, point2: {point2}")
-            set_position(client, Aircraft(i, point1[0], point1[1], -30, heading=heading, pitch=0, roll=0, gear=0), ref)
+            set_position(client, Aircraft(i, 0, 50, 0, heading=-90, pitch=0, roll=0, gear=0), ref)
+            # set_position(client, Aircraft(1, 0, 100, 0, 0, pitch=0, roll=0))
             path = generate_positions_by_timestep(point1, heading, fps, duration, cruise_speed)
             all_positions_in_path.append(path)
 
     time.sleep(0.5)
-   
 
-
-    for t in range(len(all_positions_in_path[0])):
-
-        # print(f"Time step: {t}")
-        # time.sleep(1/fps*2)
-
-        for j, positions in enumerate(all_positions_in_path):
-            # print(f"Setting position for aircraft {j} at {positions[t]}")
-            if j == 0:
-                set_position(client, Aircraft(j, positions[t][0], positions[t][1], 0, heading=-998, pitch=-998, roll=-998), ref)
-            else:
-                set_position(client, Aircraft(j, positions[t][0], positions[t][1], -30, heading=-998, pitch=-998, roll=-998), ref)
-
-        time.sleep(1/fps)
-
-        if hwnd:
-            if platform.system() == "Windows":
-                screenshot = wcw.capture_xplane_window(hwnd, abs_x, abs_y, width, height)
-            else:
-                screenshot = so.capture_xplane_window(hwnd, abs_x, abs_y)  
-
-        # ret = out.write(screenshot)
-        screenshot = screenshot.copy()
-        bbc_list, x, y, w, h = get_bb_coords_acfs(client, len(icao_code_acf_list), proj, screenshot.shape[0], screenshot.shape[1], screenshot)
-
-        # Calculate bearing and bearing size
-
-        bearing_sizes = [float(width) * pixelAD_x for width in w]
-        bearing_angles = [(float(x) * pixelAD_x) - (X_FOV_rad/2)  for x in x]
-        bearing_info = list(zip(bearing_angles, bearing_sizes))
-        # print(f"Bearing Info: {bearing_info}")
-
-        aw.append(bearing_info)
-        for i, bbc in enumerate(bbc_list):
-            cv2.circle(screenshot, (int(bbc[0]), int(bbc[1])), 1, (0, 0, 255), -1)
-        
-        ret = out.write(screenshot)
-        half_screenshot = cv2.resize(screenshot, (screenshot.shape[1] // 2, screenshot.shape[0] // 2))
-        cv2.imshow('X-Plane Screenshot', half_screenshot)
-        # screenshot = screenshot.copy()
-
-        if cv2.waitKey(1) & 0xFF == 27:
+    if hwnd:
+        if platform.system() == "Windows":
+            screenshot = wcw.capture_xplane_window(hwnd, abs_x, abs_y, width, height)
+        else:
+            screenshot = so.capture_xplane_window(hwnd, abs_x, abs_y)
+    screenshot = screenshot.copy()
+    print(f"Screenshot shape: {screenshot.shape[1], screenshot.shape[0]}")
+    bbc_list, x, y, w, h = get_bb_coords_acfs(client, len(icao_code_acf_list), proj, screenshot.shape[0], screenshot.shape[1], screenshot)
+    print(f"Bounding Box Coordinates: {bbc_list}")
+    print(f"x, y, w, h: {x, y, w, h}")
+    bearing_sizes = np.array(w) * pixelAD_x_deg
+    print(f"Bearing Sizes: {bearing_sizes}")
+    while True:
+        cv2.imshow('X-Plane Screenshot', screenshot)
+        if cv2.waitKey(0) & 0xFF == 27:
             break
+    # for t in range(len(all_positions_in_path[0])):
+
+    #     # print(f"Time step: {t}")
+    #     # time.sleep(1/fps*2)
+
+    #     for j, positions in enumerate(all_positions_in_path):
+    #         # print(f"Setting position for aircraft {j} at {positions[t]}")
+    #         if j == 0:
+    #             set_position(client, Aircraft(j, positions[t][0], positions[t][1], 0, heading=-998, pitch=-998, roll=-998), ref)
+    #         else:
+    #             set_position(client, Aircraft(j, positions[t][0], positions[t][1], -30, heading=-998, pitch=-998, roll=-998), ref)
+
+    #     time.sleep(1/fps)
+
+    #     if hwnd:
+    #         if platform.system() == "Windows":
+    #             screenshot = wcw.capture_xplane_window(hwnd, abs_x, abs_y, width, height)
+    #         else:
+    #             screenshot = so.capture_xplane_window(hwnd, abs_x, abs_y)  
+
+    #     # ret = out.write(screenshot)
+    #     screenshot = screenshot.copy()
+    #     bbc_list, x, y, w, h = get_bb_coords_acfs(client, len(icao_code_acf_list), proj, screenshot.shape[0], screenshot.shape[1], screenshot)
+
+    #     # Calculate bearing and bearing size
+
+    #     bearing_sizes = [float(width) * pixelAD_x for width in w]
+    #     bearing_angles = [(float(x) * pixelAD_x) - (X_FOV_rad/2)  for x in x]
+    #     bearing_info = list(zip(bearing_angles, bearing_sizes))
+    #     # print(f"Bearing Info: {bearing_info}")
+
+    #     aw.append(bearing_info)
+    #     for i, bbc in enumerate(bbc_list):
+    #         cv2.circle(screenshot, (int(bbc[0]), int(bbc[1])), 1, (0, 0, 255), -1)
+        
+    #     # ret = out.write(screenshot)
+    #     half_screenshot = cv2.resize(screenshot, (screenshot.shape[1] // 2, screenshot.shape[0] // 2))
+    #     cv2.imshow('X-Plane Screenshot', half_screenshot)
+    #     # screenshot = screenshot.copy()
+
+    #     if cv2.waitKey(1) & 0xFF == 27:
+    #         break
     # print(f'aw len: {len(aw)}')
     # np.save(f'{timestamp}_all_positions_in_path.npy', all_positions_in_path)
     # np.save(f'{timestamp}_bearing_info.npy', aw)
 
     
-    out.release()
-    cv2.destroyAllWindows()
+    # out.release()
+    # cv2.destroyAllWindows()
     # for path in all_positions_in_path[0]:
     # for t in range(len(all_positions_in_path[0])):
     #     for j, pos in enumerate(positions):
