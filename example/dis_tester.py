@@ -412,7 +412,7 @@ def run_data_generation(client):
     # Set starting position of ownship and intruder
     set_position(client, Aircraft(0, 0, 0, 0, heading=0, pitch=0, roll=0), ref)
     # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    set_position(client, Aircraft(1, 0, 1000, 0, heading=0, pitch=0, roll=0, gear=0), ref)
+    set_position(client, Aircraft(1, 0, 100, 0, heading=0, pitch=0, roll=0, gear=0), ref)
     # client.sendDREFs([dome_offset_heading, dome_offset_pitch], [0, 0])
     client.sendVIEW(85)
     time.sleep(0.03)
@@ -550,6 +550,32 @@ def get_bb_coords_acfs(client, Number_of_aircrafts, proj_mat, screen_h, screen_w
 
     return bb_coords, x_list, y_list, w_list, h_list
 
+def calculate_angular_diameter(world_matrix, projection_matrix_3d, aircraft_position, object_size):
+    # 提取旋转矩阵和平移向量
+    rotation_matrix = world_matrix[:3, :3]
+    translation_vector = world_matrix[:3, 3]
+
+    # 计算相机在世界坐标系中的位置
+    camera_position = -rotation_matrix.T @ translation_vector
+
+    # 将物体的世界坐标转换为相机坐标
+    aircraft_position_homogeneous = np.append(aircraft_position, 1)
+    camera_coordinates = world_matrix @ aircraft_position_homogeneous
+
+    # 将相机坐标转换为图像坐标
+    image_coordinates_homogeneous = projection_matrix_3d @ camera_coordinates
+    image_coordinates = image_coordinates_homogeneous[:2] / image_coordinates_homogeneous[3]
+
+    # 计算物体在图像中的投影大小
+    fx = projection_matrix_3d[0, 0]
+    fy = projection_matrix_3d[1, 1]
+    object_size_in_pixels = object_size * fx / camera_coordinates[2]
+
+    # 计算角直径
+    angular_diameter = 2 * np.arctan(object_size_in_pixels / (2 * fx)) * (180 / np.pi)
+
+    a_pixel_angular_diameter = 2 * np.arctan((1/640) / (2 * fx)) * (180 / np.pi)
+    return abs(angular_diameter), abs(object_size_in_pixels), abs(a_pixel_angular_diameter)
 
 def run_data_generation_sequentially(client):
     all_positions_in_path = []
@@ -590,7 +616,7 @@ def run_data_generation_sequentially(client):
     print(f"Pixel Angle Density in radians: {pixelAD_x_radians}")
     # X_FOV = X_FOV - 1
     print(f"Field of View: {X_FOV}")
-    near1, far1 = 50, 100075
+    near1, far1 = 50, 1000
     near2, far2 = 50, 1000
 
     icao_code_acf_list = get_list_acfs_icao(client)
@@ -629,14 +655,58 @@ def run_data_generation_sequentially(client):
     screenshot = screenshot.copy()
     print(f"Screenshot shape: {screenshot.shape[1], screenshot.shape[0]}")
     bbc_list, x, y, w, h = get_bb_coords_acfs(client, len(icao_code_acf_list), proj, screenshot.shape[0], screenshot.shape[1], screenshot)
+    # print(f"Bounding Box Coordinates len: {len(bbc_list)}")
     print(f"Bounding Box Coordinates: {bbc_list}")
     print(f"x, y, w, h: {x, y, w, h}")
     bearing_sizes = np.array(w) * pixelAD_x_deg
     print(f"Bearing Sizes: {bearing_sizes}")
-    while True:
-        cv2.imshow('X-Plane Screenshot', screenshot)
-        if cv2.waitKey(0) & 0xFF == 27:
-            break
+
+  
+
+
+
+    # import numpy as np
+
+    # 获取相机的世界矩阵并提取位置信息
+    world_matrix = client.getDREF("sim/graphics/view/world_matrix")
+    print(f"World matrix: {world_matrix}")
+    world_matrix = np.reshape(world_matrix, (4, 4)).T
+    # 提取旋转矩阵和平移向量
+    rotation_matrix = world_matrix[:3, :3]
+    translation_vector = world_matrix[:3, 3]
+
+    # 计算相机在世界坐标系中的位置
+    camera_position = -rotation_matrix.T @ translation_vector
+    print(f"Camera position: {camera_position}")
+    # 获取目标飞机的位置（替换 i 为飞机的索引）
+    i = 1  # 例如，飞机索引为 1
+    aircraft_x = client.getDREF(f"sim/multiplayer/position/plane{i}_x")[0]
+    aircraft_y = client.getDREF(f"sim/multiplayer/position/plane{i}_y")[0]
+    aircraft_z = client.getDREF(f"sim/multiplayer/position/plane{i}_z")[0]
+    aircraft_position = np.array([aircraft_x, aircraft_y, aircraft_z])
+    print(f"Aircraft position: {aircraft_position}")
+    # 计算相机与飞机之间的距离
+    distance = np.linalg.norm(camera_position - aircraft_position)
+    print(f"Distance between camera and aircraft {i}: {distance} meters")
+
+    proj = client.getDREF("sim/graphics/view/projection_matrix_3d")
+    proj = np.reshape(proj, (4, 4)).T
+    # 提取相机的内参矩阵
+    print(f"Projection matrix: {proj}")
+
+
+    object_size = 39.5  # 物体大小，例如 39.5 米
+
+    angular_diameter, object_size_in_pixels, a_pixels_ang = calculate_angular_diameter(world_matrix, proj, aircraft_position, object_size)
+    print(f"Angular Diameter: {angular_diameter} degrees")
+    print(f"Object size in pixels: {object_size_in_pixels}")
+    print(f"Object size in pixels: {object_size_in_pixels*screenshot.shape[1]/2}")
+    print(f"Angular Diameter of a pixel: {a_pixels_ang} degrees")
+
+    # while True:
+    #     cv2.imshow('X-Plane Screenshot', screenshot)
+    #     if cv2.waitKey(0) & 0xFF == 27:
+    #         break
     # for t in range(len(all_positions_in_path[0])):
 
     #     # print(f"Time step: {t}")
