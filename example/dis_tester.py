@@ -575,7 +575,24 @@ def calculate_angular_diameter(world_matrix, projection_matrix_3d, aircraft_posi
     angular_diameter = 2 * np.arctan(object_size_in_pixels / (2 * fx)) * (180 / np.pi)
 
     a_pixel_angular_diameter = 2 * np.arctan((1/640) / (2 * fx)) * (180 / np.pi)
-    return abs(angular_diameter), abs(object_size_in_pixels), abs(a_pixel_angular_diameter)
+    return abs(object_size_in_pixels), abs(angular_diameter), abs(a_pixel_angular_diameter)
+
+def extract_fov(projection_matrix):
+    # Extract elements
+    P11 = projection_matrix[0, 0]
+    P22 = projection_matrix[1, 1]
+    
+    # Calculate vertical FOV
+    fov_y = 2 * np.arctan(1 / P22)
+    
+    # Calculate aspect ratio
+    aspect_ratio = P22 / P11
+    
+    # Calculate horizontal FOV
+    fov_x = 2 * np.arctan(aspect_ratio / P22)
+    
+    # Convert to degrees for better readability
+    return np.degrees(fov_x), np.degrees(fov_y)
 
 def run_data_generation_sequentially(client):
     all_positions_in_path = []
@@ -661,10 +678,6 @@ def run_data_generation_sequentially(client):
     bearing_sizes = np.array(w) * pixelAD_x_deg
     print(f"Bearing Sizes: {bearing_sizes}")
 
-  
-
-
-
     # import numpy as np
 
     # 获取相机的世界矩阵并提取位置信息
@@ -697,14 +710,30 @@ def run_data_generation_sequentially(client):
 
     object_size = 39.5  # 物体大小，例如 39.5 米
 
-    angular_diameter, object_size_in_pixels, a_pixels_ang = calculate_angular_diameter(world_matrix, proj, aircraft_position, object_size)
+    object_size_in_pixels, angular_diameter,  a_pixels_ang = calculate_angular_diameter(world_matrix, proj, aircraft_position, object_size)
+    
+    print(f"Object size in pixels: {object_size_in_pixels}?")
     print(f"Angular Diameter: {angular_diameter} degrees")
-    print(f"Object size in pixels: {object_size_in_pixels}")
-    print(f"Object size in pixels: {object_size_in_pixels*screenshot.shape[1]/2}")
+    print(f"pixel Angular: {object_size_in_pixels*screenshot.shape[1]/2}")
     print(f"Angular Diameter of a pixel: {a_pixels_ang} degrees")
 
+    # 计算水平视场角（弧度）
+    horizontal_fov_rad = 2 * np.arctan(screenshot.shape[1] / (2 * fx))
+    # 转换为度
+    horizontal_fov_deg = np.degrees(horizontal_fov_rad)
+    print(f"计算得到的水平视场角: {horizontal_fov_deg} 度")
+    # 计算每像素角度
+    angle_per_pixel_deg = horizontal_fov_deg / screenshot.shape[1]
+
+    print(f"每像素角度: {angle_per_pixel_deg} 度")
+
+    fov_x, fov_y = extract_fov(proj)
+    print(f"Horizontal FOV: {fov_x} degrees")
+    print(f"Vertical FOV: {fov_y} degrees")
+
+
     # while True:
-    #     cv2.imshow('X-Plane Screenshot', screenshot)
+    #     cv2.imshow('X-Plane Screenshot', screenshot)``
     #     if cv2.waitKey(0) & 0xFF == 27:
     #         break
     # for t in range(len(all_positions_in_path[0])):
