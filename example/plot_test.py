@@ -41,7 +41,7 @@ fig = go.Figure(data=[go.Scatter3d(
     x=x, y=y, z=z,
     mode='markers',
     marker=dict(
-        size=2,
+        size=0.5,
         color='red', # Color of points
     )
 )])
@@ -56,4 +56,8 @@ fig.update_layout(
     title="3D Points Visualization"
 )
 
+# Save the plot as an HTML file
+fig.write_html('3d_points_plot.html')
+
+# Show the plot
 fig.show()
