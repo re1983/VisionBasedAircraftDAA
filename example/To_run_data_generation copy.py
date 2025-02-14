@@ -465,7 +465,7 @@ def points_to_bb(client, i, points, mv, proj, acf_wrl, screen_h, screen_w, scree
     list_points_xy = get_projections_xy(points_world, acf_wrl, mv, proj, screen_h, screen_w)
     # vertices_world = np.array([cg_world + R @ point for point in vertices])
     # list_vertices_xy = get_projections_xy(vertices_world, acf_wrl, mv, proj, screen_h, screen_w) 
-    # Draw_Convex_Hull_bounding_box_for_six_points(screenshot, list_points_xy)
+    Draw_Convex_Hull_bounding_box_for_six_points(screenshot, list_points_xy)
     return list_points_xy
 
 
@@ -499,7 +499,7 @@ def get_bb_coords_acfs(client, Number_of_aircrafts, proj_mat, screen_h, screen_w
             bb_coords.append((final_x, screen_h - final_y))
 
             points, cruise_speed, ADG_group = get_the_geometry_ponits(icao_code_acf_list[i])
-        # points_to_bb(client, i, points, mv, proj_mat, acf_wrl, screen_h, screen_w, screenshot)
+        points_to_bb(client, i, points, mv, proj_mat, acf_wrl, screen_h, screen_w, screenshot)
 
     return bb_coords
 
@@ -529,10 +529,10 @@ def run_data_generation_sequentially(client):
     print(f"fx, fy, cx, cy: {fx, fy, cx, cy}")
 
     """Begin data generation by calling gen_data"""
-    X_FOV = client.getDREF("sim/graphics/view/field_of_view_deg")[0] - 4
+    X_FOV = client.getDREF("sim/graphics/view/field_of_view_deg")[0] - 8
     print(f"Field of View: {X_FOV}")
-    near1, far1 = 50, 800
-    near2, far2 = 50, 800 
+    near1, far1 = 100, 1000
+    near2, far2 = 100, 1000 
 
     icao_code_acf_list = get_list_acfs_icao(client)
     print("ICAO code list:", icao_code_acf_list)
@@ -555,13 +555,12 @@ def run_data_generation_sequentially(client):
             points, cruise_speed, ADG_group = get_the_geometry_ponits(icao_code)
             heading, point1, point2 = rpg.get_random_points_between_two_trapezoids(X_FOV, near1, far1, near2, far2, offset1, offset2)
             # print(f"heading: {heading}, point1: {point1}, point2: {point2}")
-            set_position(client, Aircraft(i, point1[0], point1[1], -20*i, heading=heading, pitch=0, roll=0), ref)
+            set_position(client, Aircraft(i, point1[0], point1[1], -25*i, heading=heading, pitch=0, roll=0), ref)
             path = generate_positions_by_timestep(point1, heading, fps, duration, cruise_speed)
             all_positions_in_path.append(path)
 
-    # time.sleep(0.5)
     # np.save('all_positions_in_path.npy', all_positions_in_path)
-
+    time.sleep(0.5)
 
     for t in range(len(all_positions_in_path[0])):
 
@@ -574,7 +573,8 @@ def run_data_generation_sequentially(client):
                 set_position(client, Aircraft(j, positions[t][0], positions[t][1], 0, heading=-998, pitch=-998, roll=-998), ref)
             else:
                 set_position(client, Aircraft(j, positions[t][0], positions[t][1], -30, heading=-998, pitch=-998, roll=-998), ref)
-        # time.sleep(1/fps)
+
+        time.sleep(3/fps)
 
         if hwnd:
             if platform.system() == "Windows":
@@ -584,7 +584,7 @@ def run_data_generation_sequentially(client):
 
         screenshot = screenshot.copy()
         bbc_list = get_bb_coords_acfs(client, len(icao_code_acf_list), proj, screenshot.shape[0], screenshot.shape[1], screenshot)
-        print("Bounding Box Coordinates:", bbc_list)
+        # print("Bounding Box Coordinates:", bbc_list)
         # for i, bbc in enumerate(bbc_list):
         #     cv2.circle(screenshot, (int(bbc[0]), int(bbc[1])), 1, (0, 0, 255), -1)
         
@@ -598,9 +598,9 @@ def run_data_generation_sequentially(client):
 
 
 with xpc.XPlaneConnect() as client:
-    # client.pauseSim(False)
+    client.pauseSim(False)
     # time.sleep(0.5)
-    # client.pauseSim(True)
+    client.pauseSim(True)
     client.sendDREF("sim/operation/override/override_joystick", 1)
     # run_data_generation(client)
     run_data_generation_sequentially(client)
