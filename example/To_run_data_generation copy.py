@@ -31,7 +31,8 @@ dome_offset_heading = "sim/graphics/view/dome_offset_heading"
 dome_offset_pitch = "sim/graphics/view/dome_offset_pitch"
 # ref = [40.669332, -74.012405, 1000.0] #new york
 # ref = [24.979755, 121.451006, 500.0] #taiwan
-ref = [40.0, -111.658833, 3000.0] #provo
+# ref = [41.0, -111.658833, 3000.0] #provo
+ref = [40.136389, -111.655293, 3500.0] #Spanish Fork
 # ref = [-22.943736, -43.177820, 500.0] #rio
 # ref = [38.870277, -77.030046, 500.0] #washington dc
 name_list_points = ["Nose", "Tail", "Right", "Left", "Top", "Bottom"]
@@ -178,7 +179,7 @@ def get_the_geometry_ponits(icao_code):
     if  icao_code == "C172": # Cessna Skyhawk https://en.wikipedia.org/wiki/Cessna_172
         points = np.array([
             [0, -0.05, -2.5],   #Nose of the aircraft
-            [0, 0, 5.82],   #Tail of the aircraft
+            [0, 1.4, 5.82],   #Tail of the aircraft
             [5.5, 0.7, 0],    #Right wing tip
             [-5.5, 0.7, 0],   #Left wing tip
             [0, 1.52, 5.82],   #Top of the aircraft
@@ -439,16 +440,6 @@ def plot_positions(positions):
     plt.grid(True)
     plt.show()
 
-# FOV = 60
-# near1, far1 = 50, 1000
-# near2, far2 = 50, 1000 
-# offset1 = (0, 0)
-# offset2 = (0, 550)
-# heading, point1, point2 = rpg.get_random_points_between_two_trapezoids(FOV, near1, far1, near2, far2, offset1, offset2)
-# print(f"heading: {heading}, point1: {point1}, point2: {point2}")
-# positions_list = generate_positions(point1, heading, 30, 10, 155)
-# print(f"Number of positions: {len(positions_list)}")
-# plot_positions(positions_list)
 
 def points_to_bb(client, i, points, mv, proj, acf_wrl, screen_h, screen_w, screenshot):
 
@@ -467,7 +458,6 @@ def points_to_bb(client, i, points, mv, proj, acf_wrl, screen_h, screen_w, scree
     # list_vertices_xy = get_projections_xy(vertices_world, acf_wrl, mv, proj, screen_h, screen_w) 
     Draw_Convex_Hull_bounding_box_for_six_points(screenshot, list_points_xy)
     return list_points_xy
-
 
 def get_bb_coords_acfs(client, Number_of_aircrafts, proj_mat, screen_h, screen_w, screenshot):
     bb_coords = []
@@ -504,11 +494,58 @@ def get_bb_coords_acfs(client, Number_of_aircrafts, proj_mat, screen_h, screen_w
     return bb_coords
 
 
+def Draw_Convex_Hull_bounding_box_for_six_points_once(screenshot, points_list):
+    for points in points_list:
+        hull = cv2.convexHull(np.array(points, dtype=np.int32))
+        # cv2.polylines(screenshot, [hull], isClosed=True, color=(0, 255, 0), thickness=1)
+        x, y, w, h = cv2.boundingRect(hull)
+        cv2.rectangle(screenshot, (x, y), (x + w, y + h), (255, 0, 0), 1)
+
+
+def points_to_bb_no_img(client, i, points, mv, proj, acf_wrl, screen_h, screen_w):
+
+    R = get_rotation_matrix(*get_acf_poes_in_euler(i))
+    cg_world = acf_wrl[:3]
+    points_world = np.array([cg_world + R @ point for point in points])
+    list_points_xy = get_projections_xy(points_world, acf_wrl, mv, proj, screen_h, screen_w)
+    return list_points_xy
+
+def get_bb_coords_acfs_no_img(client, Number_of_aircrafts, proj_mat, screen_h, screen_w):
+    bb_coords = []
+    list_points_xy = []
+    mv = client.getDREF("sim/graphics/view/world_matrix")
+    icao_code_acf_list = get_list_acfs_icao(client)
+    for i in range(Number_of_aircrafts):
+        if i == 0:
+            continue
+        else:
+            acf_wrl = np.array([
+                client.getDREF((f'sim/multiplayer/position/plane{i}_x'))[0],
+                client.getDREF((f'sim/multiplayer/position/plane{i}_y'))[0],
+                client.getDREF((f'sim/multiplayer/position/plane{i}_z'))[0],
+                1.0
+            ])
+
+            acf_eye = mult_matrix_vec(mv, acf_wrl)
+            acf_ndc = mult_matrix_vec(proj_mat, acf_eye)
+            acf_ndc[3] = 1.0 / acf_ndc[3]
+            acf_ndc[0] *= acf_ndc[3]
+            acf_ndc[1] *= acf_ndc[3]
+            acf_ndc[2] *= acf_ndc[3]
+            final_x = screen_w * (acf_ndc[0] * 0.5 + 0.5)
+            final_y = screen_h * (acf_ndc[1] * 0.5 + 0.5)
+            bb_coords.append((final_x, screen_h - final_y))
+            points, cruise_speed, ADG_group = get_the_geometry_ponits(icao_code_acf_list[i])
+        tem_list_points_xy = points_to_bb_no_img(client, i, points, mv, proj_mat, acf_wrl, screen_h, screen_w)
+        list_points_xy.append(tem_list_points_xy)
+
+    return bb_coords, list_points_xy
+
 def run_data_generation_sequentially(client):
     all_positions_in_path = []
     fps = 30
     duration = 10
-
+    ref_up = [0, -30, 30, -60, 60, -90, 90, -120, 120, -150, 150, -180, 180]
     client.sendVIEW(85)
     if platform.system() == "Windows":
         hwnd, abs_x, abs_y, width, height = wcw.get_xplane_window_info(window_title)
@@ -531,8 +568,8 @@ def run_data_generation_sequentially(client):
     """Begin data generation by calling gen_data"""
     X_FOV = client.getDREF("sim/graphics/view/field_of_view_deg")[0] - 8
     print(f"Field of View: {X_FOV}")
-    near1, far1 = 100, 1000
-    near2, far2 = 100, 1000 
+    near1, far1 = 100, 900
+    near2, far2 = 100, 900 
 
     icao_code_acf_list = get_list_acfs_icao(client)
     print("ICAO code list:", icao_code_acf_list)
@@ -560,7 +597,7 @@ def run_data_generation_sequentially(client):
             all_positions_in_path.append(path)
 
     # np.save('all_positions_in_path.npy', all_positions_in_path)
-    time.sleep(0.5)
+    time.sleep(1)
 
     for t in range(len(all_positions_in_path[0])):
 
@@ -572,19 +609,25 @@ def run_data_generation_sequentially(client):
             if j == 0:
                 set_position(client, Aircraft(j, positions[t][0], positions[t][1], 0, heading=-998, pitch=-998, roll=-998), ref)
             else:
-                set_position(client, Aircraft(j, positions[t][0], positions[t][1], -30, heading=-998, pitch=-998, roll=-998), ref)
+                set_position(client, Aircraft(j, positions[t][0], positions[t][1], ref_up[j], heading=-998, pitch=-998, roll=-998, gear=0), ref)
+        
 
-        time.sleep(3/fps)
+        # if cv2.waitKey(200) & 0xFF == 27:
+        #     break
 
         if hwnd:
+            time.sleep(0.2)
             if platform.system() == "Windows":
                 screenshot = wcw.capture_xplane_window(hwnd, abs_x, abs_y, width, height)
             else:
                 screenshot = so.capture_xplane_window(hwnd, abs_x, abs_y)  
 
         screenshot = screenshot.copy()
-        bbc_list = get_bb_coords_acfs(client, len(icao_code_acf_list), proj, screenshot.shape[0], screenshot.shape[1], screenshot)
+        # bbc_list = get_bb_coords_acfs(client, len(icao_code_acf_list), proj, screenshot.shape[0], screenshot.shape[1], screenshot)
+        bbc_list, list_points_xy = get_bb_coords_acfs_no_img(client, len(icao_code_acf_list), proj, screenshot.shape[0], screenshot.shape[1])
+        # Draw_Convex_Hull_bounding_box_for_six_points_once(screenshot, list_points_xy)
         # print("Bounding Box Coordinates:", bbc_list)
+        print("List of points:", list_points_xy)
         # for i, bbc in enumerate(bbc_list):
         #     cv2.circle(screenshot, (int(bbc[0]), int(bbc[1])), 1, (0, 0, 255), -1)
         
@@ -593,6 +636,7 @@ def run_data_generation_sequentially(client):
 
         if cv2.waitKey(1) & 0xFF == 27:
             break
+
     
     cv2.destroyAllWindows()
 
@@ -600,7 +644,14 @@ def run_data_generation_sequentially(client):
 with xpc.XPlaneConnect() as client:
     client.pauseSim(False)
     # time.sleep(0.5)
-    client.pauseSim(True)
+    
+    # client.sendDREF("sim/aircraft/overflow/acf_ExhaustDirt", 0)
+    
     client.sendDREF("sim/operation/override/override_joystick", 1)
+    # client.sendDREF("sim/operation/override/override_flightcontrol", 1)
+    # client.sendDREF("sim/aircraft2/engine/exhaust_dirtiness_ratio", 0.0)
+    client.pauseSim(True)
+
+
     # run_data_generation(client)
     run_data_generation_sequentially(client)
