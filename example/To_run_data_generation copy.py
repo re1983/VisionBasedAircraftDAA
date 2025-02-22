@@ -10,6 +10,8 @@ import cv2
 import pymap3d as pm
 import numpy as np
 import platform
+import configparser
+
 # Conditional import based on OS
 if platform.system() == "Windows":
     import win_capturewindow as wcw
@@ -29,12 +31,17 @@ dref_roll = "sim/cockpit2/camera/camera_offset_roll"
 dref_view_roll = "sim/graphics/view/view_roll"
 dome_offset_heading = "sim/graphics/view/dome_offset_heading"
 dome_offset_pitch = "sim/graphics/view/dome_offset_pitch"
-# ref = [40.669332, -74.012405, 1000.0] #new york
+# ref = [40.669, -74.012405, 800.0] #new york
+# ref = [35.636150, 139.748374, 800.0] #tokyo
 # ref = [24.979755, 121.451006, 500.0] #taiwan
-# ref = [41.0, -111.658833, 3000.0] #provo
-ref = [40.136389, -111.655293, 3500.0] #Spanish Fork
+# ref = [40.2, -111.656898, 3000.0] #provo
+# ref = [40.136389, -111.655293, 3500.0] #Spanish Fork
+# ref = [40.3, -111.867171, 3000.0] #Utah Lake
 # ref = [-22.943736, -43.177820, 500.0] #rio
-# ref = [38.870277, -77.030046, 500.0] #washington dc
+# ref = [38.849538, -77.019661, 800.0] #washington dc
+# ref = [36.045157, -112.230614, 4000.0] #grand canyon
+# ref = [40.748457, -112.593423, 3500.0] #salt lake city
+ref = [40.548372, -111.463253, 3500.0] #park city
 name_list_points = ["Nose", "Tail", "Right", "Left", "Top", "Bottom"]
 color_list_points = [(0, 0, 255), (0, 255, 0), (255, 0, 0), (255, 255, 0), (0, 255, 255), (255, 0, 255)]
 class Aircraft:
@@ -426,6 +433,7 @@ def generate_positions_by_timestep(start_point, heading, fps, duration,velocity_
 
 import matplotlib.pyplot as plt
 import random_path_gen as rpg
+import os
 
 def plot_positions(positions):
     """Plot a list of positions on a 2D plane."""
@@ -511,8 +519,10 @@ def points_to_bb_no_img(client, i, points, mv, proj, acf_wrl, screen_h, screen_w
     return list_points_xy
 
 def get_bb_coords_acfs_no_img(client, Number_of_aircrafts, proj_mat, screen_h, screen_w):
+    # print("screen_h:", screen_h)
+    # print("screen_w:", screen_w)
     bb_coords = []
-    list_points_xy = []
+    list_bb_xywh = []
     mv = client.getDREF("sim/graphics/view/world_matrix")
     icao_code_acf_list = get_list_acfs_icao(client)
     for i in range(Number_of_aircrafts):
@@ -537,9 +547,37 @@ def get_bb_coords_acfs_no_img(client, Number_of_aircrafts, proj_mat, screen_h, s
             bb_coords.append((final_x, screen_h - final_y))
             points, cruise_speed, ADG_group = get_the_geometry_ponits(icao_code_acf_list[i])
         tem_list_points_xy = points_to_bb_no_img(client, i, points, mv, proj_mat, acf_wrl, screen_h, screen_w)
-        list_points_xy.append(tem_list_points_xy)
+        hull = cv2.convexHull(np.array(tem_list_points_xy, dtype=np.int32))
+        list_bb_xywh.append(hull)
 
-    return bb_coords, list_points_xy
+    return bb_coords, list_bb_xywh
+
+def clip_bbox(x, y, w, h, screen_w, screen_h):
+    # """自動裁剪並回傳有效區域，若完全超出則回傳None"""
+    # 處理負寬高 (OpenCV格式兼容)
+    if w < 0:
+        x += w
+        w = abs(w)
+    if h < 0:
+        y += h
+        h = abs(h)
+
+    # 第一階段：左右裁剪
+    x1 = max(0, min(x, screen_w))          # 左邊界
+    x2 = max(0, min(x + w, screen_w))      # 右邊界
+    new_w = x2 - x1
+
+    # 第二階段：上下裁剪
+    y1 = max(0, min(y, screen_h))          # 上邊界
+    y2 = max(0, min(y + h, screen_h))      # 下邊界
+    new_h = y2 - y1
+
+    # 有效性檢查
+    if new_w <= 0 or new_h <= 0:
+        return None  # 完全超出螢幕
+
+    return (x1, y1, new_w, new_h)
+
 
 def run_data_generation_sequentially(client):
     all_positions_in_path = []
@@ -554,7 +592,8 @@ def run_data_generation_sequentially(client):
         xwininfo_output = subprocess.check_output(['xwininfo', '-name', 'X-System']).decode('utf-8')
         hwnd, abs_x, abs_y = so.get_xplane_window_info(xwininfo_output)
         screenshot = so.capture_xplane_window(hwnd, abs_x, abs_y)
-
+    screen_w = screenshot.shape[1]
+    screen_h = screenshot.shape[0]
     print(f"Screenshot shape: {screenshot.shape[1], screenshot.shape[0]}")
     print(f"Reference coordinates: {ref}")
    
@@ -568,8 +607,8 @@ def run_data_generation_sequentially(client):
     """Begin data generation by calling gen_data"""
     X_FOV = client.getDREF("sim/graphics/view/field_of_view_deg")[0] - 8
     print(f"Field of View: {X_FOV}")
-    near1, far1 = 100, 900
-    near2, far2 = 100, 900 
+    near1, far1 = 100, 800
+    near2, far2 = 100, 800 
 
     icao_code_acf_list = get_list_acfs_icao(client)
     print("ICAO code list:", icao_code_acf_list)
@@ -598,47 +637,91 @@ def run_data_generation_sequentially(client):
 
     # np.save('all_positions_in_path.npy', all_positions_in_path)
     time.sleep(1)
+    current_timestamp = int(time.time())
+    output_dir = f'output/rural_{current_timestamp}/img/'
+    os.makedirs(output_dir, exist_ok=True)
+    gt_dir = f'output/rural_{current_timestamp}/gt/'
+    os.makedirs(gt_dir, exist_ok=True)
+    # filename = f'output/rural_{current_timestamp}/gt.txt'
+    filename = os.path.join(gt_dir, 'gt.txt')
+    config = configparser.ConfigParser()
+    config['Sequence'] = {
+        'name': f'rural_{current_timestamp}',
+        'imDir': 'img1',
+        'frameRate': '30',
+        'seqLength': '300',
+        'imWidth': str(screen_w),
+        'imHeight': str(screen_h),
+        'imExt': '.png'
+        }
+    with open(f'output/rural_{current_timestamp}/seqinfo.ini', 'w') as configfile:
+        config.write(configfile)
+    with open(filename, 'a') as f:
+        for t in range(len(all_positions_in_path[0])):
 
-    for t in range(len(all_positions_in_path[0])):
+            # print(f"Time step: {t}")
+            # time.sleep(1/fps*2)
 
-        # print(f"Time step: {t}")
-        # time.sleep(1/fps*2)
+            for j, positions in enumerate(all_positions_in_path):
+                # print(f"Setting position for aircraft {j} at {positions[t]}")
+                if j == 0:
+                    set_position(client, Aircraft(j, positions[t][0], positions[t][1], 0, heading=-998, pitch=-998, roll=-998), ref)
+                else:
+                    set_position(client, Aircraft(j, positions[t][0], positions[t][1], ref_up[j], heading=-998, pitch=-998, roll=-998, gear=0), ref)
+            if t == 0 & hwnd:
+                time.sleep(2.0)
+                # if platform.system() == "Windows":
+                #     screenshot = wcw.capture_xplane_window(hwnd, abs_x, abs_y, width, height)
+                # else:
+                #     screenshot = so.capture_xplane_window(hwnd, abs_x, abs_y) 
 
-        for j, positions in enumerate(all_positions_in_path):
-            # print(f"Setting position for aircraft {j} at {positions[t]}")
-            if j == 0:
-                set_position(client, Aircraft(j, positions[t][0], positions[t][1], 0, heading=-998, pitch=-998, roll=-998), ref)
-            else:
-                set_position(client, Aircraft(j, positions[t][0], positions[t][1], ref_up[j], heading=-998, pitch=-998, roll=-998, gear=0), ref)
+            # if cv2.waitKey(200) & 0xFF == 27:
+            #     break
+            # if hwnd:
+            #     time.sleep(0.2)
+            #     if platform.system() == "Windows":
+            #         screenshot = wcw.capture_xplane_window(hwnd, abs_x, abs_y, width, height)
+            #     else:
+            #         screenshot = so.capture_xplane_window(hwnd, abs_x, abs_y)
+                 
+            
+            # cv2.imwrite(f'output/img/{t:04d}.png', screenshot)
+
+            bbc_list, list_bb_xywh = get_bb_coords_acfs_no_img(client, len(icao_code_acf_list), proj, screen_h, screen_w)
+
+            if hwnd:
+                # time.sleep(0.2)
+                if platform.system() == "Windows":
+                    screenshot = wcw.capture_xplane_window(hwnd, abs_x, abs_y, width, height)
+                else:
+                    screenshot = so.capture_xplane_window(hwnd, abs_x, abs_y)
+            cv2.imwrite(f'output/rural_{current_timestamp}/img/{t:04d}.png', screenshot)
+            screenshot = screenshot.copy()
+            for i, bbc in enumerate(list_bb_xywh):
+                # cv2.polylines(screenshot, [bbc], isClosed=True, color=(0, 255, 0), thickness=1)
+                x, y, w, h = cv2.boundingRect(bbc)
+                clipped = clip_bbox(x, y, w, h, screen_w, screen_h)
+                if clipped:
+                    cx, cy, cw, ch = clipped
+                    cv2.putText(screenshot, f"ACF{i}", (cx, cy), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
+                    cv2.rectangle(screenshot, (cx, cy), (cx + cw, cy + ch), (255, 0, 0), 2)
+                    f.write(f"{t}, {i}, {cx}, {cy}, {cw}, {ch}, -1, -1, -1, -1\n")
+                    # cv2.putText(screenshot, f"ACF{i}", (x, y), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
+                    # cv2.rectangle(screenshot, (x, y), (x + w, y + h), (255, 0, 0), 2)
+                    # f.write(f"{t}, {i}, {cx}, {cy}, {cw}, {ch}, -1, -1, -1, -1\n")
+                else:
+                    print(f"物件 {i}: 完全超出螢幕")
+                # f.write(f"{t}, {i}, {x}, {y}, {w}, {h}, -1, -1, -1, -1\n")
+            print(f"Frame {t} done.")
+            cv2.imshow('X-Plane Screenshot', screenshot)
+            
+            # screenshot = screenshot.copy()
+
+            if cv2.waitKey(1) & 0xFF == 27:
+                break
+
         
-
-        # if cv2.waitKey(200) & 0xFF == 27:
-        #     break
-
-        if hwnd:
-            time.sleep(0.2)
-            if platform.system() == "Windows":
-                screenshot = wcw.capture_xplane_window(hwnd, abs_x, abs_y, width, height)
-            else:
-                screenshot = so.capture_xplane_window(hwnd, abs_x, abs_y)  
-
-        screenshot = screenshot.copy()
-        # bbc_list = get_bb_coords_acfs(client, len(icao_code_acf_list), proj, screenshot.shape[0], screenshot.shape[1], screenshot)
-        bbc_list, list_points_xy = get_bb_coords_acfs_no_img(client, len(icao_code_acf_list), proj, screenshot.shape[0], screenshot.shape[1])
-        # Draw_Convex_Hull_bounding_box_for_six_points_once(screenshot, list_points_xy)
-        # print("Bounding Box Coordinates:", bbc_list)
-        print("List of points:", list_points_xy)
-        # for i, bbc in enumerate(bbc_list):
-        #     cv2.circle(screenshot, (int(bbc[0]), int(bbc[1])), 1, (0, 0, 255), -1)
-        
-        cv2.imshow('X-Plane Screenshot', screenshot)
-        # screenshot = screenshot.copy()
-
-        if cv2.waitKey(1) & 0xFF == 27:
-            break
-
-    
-    cv2.destroyAllWindows()
+        cv2.destroyAllWindows()
 
 
 with xpc.XPlaneConnect() as client:
