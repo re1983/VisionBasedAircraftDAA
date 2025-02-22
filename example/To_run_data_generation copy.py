@@ -638,7 +638,7 @@ def run_data_generation_sequentially(client):
     # np.save('all_positions_in_path.npy', all_positions_in_path)
     time.sleep(1)
     current_timestamp = int(time.time())
-    output_dir = f'output/rural_{current_timestamp}/img/'
+    output_dir = f'output/rural_{current_timestamp}/img1/'
     os.makedirs(output_dir, exist_ok=True)
     gt_dir = f'output/rural_{current_timestamp}/gt/'
     os.makedirs(gt_dir, exist_ok=True)
@@ -705,7 +705,7 @@ def run_data_generation_sequentially(client):
                     cx, cy, cw, ch = clipped
                     cv2.putText(screenshot, f"ACF{i}", (cx, cy), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
                     cv2.rectangle(screenshot, (cx, cy), (cx + cw, cy + ch), (255, 0, 0), 2)
-                    f.write(f"{t}, {i}, {cx}, {cy}, {cw}, {ch}, -1, -1, -1, -1\n")
+                    f.write(f"{t}, {i}, {cx}, {cy}, {cw}, {ch}, 1, -1, -1, -1\n")
                     # cv2.putText(screenshot, f"ACF{i}", (x, y), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
                     # cv2.rectangle(screenshot, (x, y), (x + w, y + h), (255, 0, 0), 2)
                     # f.write(f"{t}, {i}, {cx}, {cy}, {cw}, {ch}, -1, -1, -1, -1\n")
