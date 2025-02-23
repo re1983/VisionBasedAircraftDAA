@@ -34,14 +34,14 @@ dome_offset_pitch = "sim/graphics/view/dome_offset_pitch"
 # ref = [40.669, -74.012405, 800.0] #new york
 # ref = [35.636150, 139.748374, 800.0] #tokyo
 # ref = [24.979755, 121.451006, 500.0] #taiwan
-# ref = [40.2, -111.656898, 3000.0] #provo
+# ref = [40.2, -111.656898, 5000.0] #provo
 # ref = [40.136389, -111.655293, 3500.0] #Spanish Fork
 # ref = [40.3, -111.867171, 3000.0] #Utah Lake
 # ref = [-22.943736, -43.177820, 500.0] #rio
 # ref = [38.849538, -77.019661, 800.0] #washington dc
-# ref = [36.045157, -112.230614, 4000.0] #grand canyon
-# ref = [40.748457, -112.593423, 3500.0] #salt lake city
-ref = [40.548372, -111.463253, 3500.0] #park city
+# ref = [35.8, -112.230614, 7000.0] #grand canyon
+ref = [40.3, -111.92, 5000.0] #salt lake city
+# ref = [40.548372, -111.463253, 3500.0] #park city
 name_list_points = ["Nose", "Tail", "Right", "Left", "Top", "Bottom"]
 color_list_points = [(0, 0, 255), (0, 255, 0), (255, 0, 0), (255, 255, 0), (0, 255, 255), (255, 0, 255)]
 class Aircraft:
@@ -582,7 +582,7 @@ def clip_bbox(x, y, w, h, screen_w, screen_h):
 def run_data_generation_sequentially(client):
     all_positions_in_path = []
     fps = 30
-    duration = 10
+    duration = 5
     ref_up = [0, -30, 30, -60, 60, -90, 90, -120, 120, -150, 150, -180, 180]
     client.sendVIEW(85)
     if platform.system() == "Windows":
@@ -605,10 +605,10 @@ def run_data_generation_sequentially(client):
     print(f"fx, fy, cx, cy: {fx, fy, cx, cy}")
 
     """Begin data generation by calling gen_data"""
-    X_FOV = client.getDREF("sim/graphics/view/field_of_view_deg")[0] - 8
+    X_FOV = client.getDREF("sim/graphics/view/field_of_view_deg")[0] - 2
     print(f"Field of View: {X_FOV}")
-    near1, far1 = 100, 800
-    near2, far2 = 100, 800 
+    near1, far1 = 200, 1600
+    near2, far2 = 200, 1600 
 
     icao_code_acf_list = get_list_acfs_icao(client)
     print("ICAO code list:", icao_code_acf_list)
@@ -638,7 +638,7 @@ def run_data_generation_sequentially(client):
     # np.save('all_positions_in_path.npy', all_positions_in_path)
     time.sleep(1)
     current_timestamp = int(time.time())
-    output_dir = f'output/rural_{current_timestamp}/img1/'
+    output_dir = f'output/rural_{current_timestamp}/img/'
     os.makedirs(output_dir, exist_ok=True)
     gt_dir = f'output/rural_{current_timestamp}/gt/'
     os.makedirs(gt_dir, exist_ok=True)
@@ -647,9 +647,9 @@ def run_data_generation_sequentially(client):
     config = configparser.ConfigParser()
     config['Sequence'] = {
         'name': f'rural_{current_timestamp}',
-        'imDir': 'img1',
-        'frameRate': '30',
-        'seqLength': '300',
+        'imDir': 'img',
+        'frameRate': f'{fps}',
+        'seqLength': f'{duration*fps}',
         'imWidth': str(screen_w),
         'imHeight': str(screen_h),
         'imExt': '.png'
@@ -705,7 +705,7 @@ def run_data_generation_sequentially(client):
                     cx, cy, cw, ch = clipped
                     cv2.putText(screenshot, f"ACF{i}", (cx, cy), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
                     cv2.rectangle(screenshot, (cx, cy), (cx + cw, cy + ch), (255, 0, 0), 2)
-                    f.write(f"{t}, {i}, {cx}, {cy}, {cw}, {ch}, 1, -1, -1, -1\n")
+                    f.write(f"{t+1}, {i}, {cx}, {cy}, {cw}, {ch}, -1, 1, -1, -1\n")
                     # cv2.putText(screenshot, f"ACF{i}", (x, y), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
                     # cv2.rectangle(screenshot, (x, y), (x + w, y + h), (255, 0, 0), 2)
                     # f.write(f"{t}, {i}, {cx}, {cy}, {cw}, {ch}, -1, -1, -1, -1\n")
@@ -737,4 +737,6 @@ with xpc.XPlaneConnect() as client:
 
 
     # run_data_generation(client)
+    # for i in range(1, 50):
     run_data_generation_sequentially(client)
+        # print(f"Sequence {i} done.")
