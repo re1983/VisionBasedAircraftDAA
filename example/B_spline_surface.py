@@ -3,6 +3,7 @@ from scipy.interpolate import RectBivariateSpline, bisplrep, bisplev
 import matplotlib.pyplot as plt
 from scipy.stats import binned_statistic_2d
 import plotly.graph_objects as go
+import plotly.io as pio
 
 # 加载 3D 点数据
 points_3d = np.load('project_directory/sparse/points_3d.npy')
@@ -85,7 +86,7 @@ surface_1 = go.Surface(x=X, y=Y, z=control_z, colorscale='gray', opacity=0.7)
 # surface_1 = go.Surface(x=x_fine, y=y_fine, z=Z_fine, colorscale='Hot', opacity=0.7)
 # surface_2 = go.Surface(x=X_2, y=Y_2, z=Z_2, colorscale='Hot', opacity=0.7)
 
-# Create a scatter plot for the original points
+# Create a scatter plot for thimport plotly.io as pioe original points
 scatter = go.Scatter3d(x=x, y=y, z=z, mode='markers', marker=dict(size=2, color='red'))
 
 scatter_cp = go.Scatter3d(x=X.flatten(), y=Y.flatten(), z=control_z.flatten(), mode='markers', marker=dict(size=2, color='green')) # , name='Control Points
@@ -108,4 +109,5 @@ fig.update_layout(scene=dict(
 
 # Show the plot
 fig.show()
+pio.write_html(fig, file="3d_surface_plot.html", auto_open=True)
 
