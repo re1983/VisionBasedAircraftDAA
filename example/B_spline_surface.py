@@ -6,7 +6,7 @@ import plotly.graph_objects as go
 import plotly.io as pio
 
 # 加载 3D 点数据
-points_3d = np.load('project_directory/sparse/points_3d.npy')
+points_3d = np.load('project_directory/sparse/points_3d_new.npy')
 
 # Sample 3D points (replace with your data)
 # points_3d = np.load('path_to_your_3d_points.npy')
