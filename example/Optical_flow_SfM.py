@@ -140,6 +140,7 @@ for filename in sorted(os.listdir(image_dir)):
         matrix_path = os.path.join(image_dir, filename.replace('.png', '.npy').replace('.jpg', '.npy'))
         world_matrix = np.load(matrix_path)
         # print(matrix_path)
+        # print(world_matrix)
         # 生成 OpenCV 投影矩阵
         width, height = image.shape[1], image.shape[0]
         opencv_proj_matrix = convert_xplane_to_opencv(projection_matrix_3d, world_matrix, width, height)
@@ -147,8 +148,10 @@ for filename in sorted(os.listdir(image_dir)):
 
 points_3d = triangulate_all_images(projection_matrices, images)
 # 显示 3D 点
-print("3D Points: \n", points_3d)
-np.save('project_directory/sparse/points_3d.npy', points_3d)
+# print("3D Points: \n", points_3d)
+print("Number of 3D Points: ", len(points_3d))
+# 保存 3D 点到文件
+np.save('project_directory/sparse/points_3d_now.npy', points_3d)
 
 # # 使用 Matplotlib 绘制 3D 点
 # import matplotlib.pyplot as plt
