@@ -1,3 +1,4 @@
+output/
 datasets/data_*
 
 src/*[.pt|.onnx]
